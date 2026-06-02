@@ -9,7 +9,8 @@
     "preview": "vite preview --config client/vite.config.js",
     "start": "node server/index.js",
     "server": "node server/index.js",
-    "dev:full": "concurrently \"npm run server\" \"npm run dev\""
+    "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
+    "postinstall": "npm run build"
   },
   "keywords": [],
   "author": "",
