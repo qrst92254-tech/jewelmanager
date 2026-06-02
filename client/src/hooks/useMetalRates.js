@@ -15,7 +15,7 @@ export function useMetalRates() {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`${API_URL}/api/rates`);
+        const response = await fetch(`${API_URL}/api/prices/live`);
         const json = await response.json();
 
         if (!response.ok || json.success !== true) {

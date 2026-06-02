@@ -1,11 +1,19 @@
 import React from 'react';
 import { useMetalRates } from '../hooks/useMetalRates';
 
-const cities = ['Chennai', 'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Kolkata', 'Ahmedabad', 'Pune'];
-
 const PriceTicker = () => {
     const { data, loading, error } = useMetalRates();
-    const lastUpdated = data?.date ? new Date(data.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : null;
+    const lastUpdated = data?.last_updated ? new Date(data.last_updated).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : null;
+
+    const rows = [
+        { label: 'Gold 24K', value: data?.gold_24k_per_gram },
+        { label: 'Gold 22K', value: data?.gold_22k_per_gram },
+        { label: 'Gold 18K', value: data?.gold_18k_per_gram },
+        { label: 'Gold 14K', value: data?.gold_14k_per_gram },
+        { label: 'Silver 999', value: data?.silver_999_per_gram },
+        { label: 'Silver 925', value: data?.silver_925_per_gram },
+        { label: 'Silver 800', value: data?.silver_800_per_gram }
+    ];
 
     return (
         <div className="page-wrapper main-content fade-in container">
@@ -35,26 +43,19 @@ const PriceTicker = () => {
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr>
-                                <th style={{ padding: '0.85rem 1rem', textAlign: 'left', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>City</th>
-                                <th style={{ padding: '0.85rem 1rem', textAlign: 'left', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>Gold 22K</th>
-                                <th style={{ padding: '0.85rem 1rem', textAlign: 'left', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>Gold 24K</th>
-                                <th style={{ padding: '0.85rem 1rem', textAlign: 'left', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>Silver</th>
+                                <th style={{ padding: '0.85rem 1rem', textAlign: 'left', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>Metal / Purity</th>
+                                <th style={{ padding: '0.85rem 1rem', textAlign: 'left', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>Rate (₹/g)</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {cities.map((city) => {
-                                const gold22 = data?.gold?.[city]?.['22K'];
-                                const gold24 = data?.gold?.[city]?.['24K'];
-                                const silver = data?.silver?.[city]?.perGram;
-                                return (
-                                    <tr key={city}>
-                                        <td style={{ padding: '0.85rem 1rem', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)' }}>{city}</td>
-                                        <td style={{ padding: '0.85rem 1rem', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)' }}>{gold22 != null ? `₹ ${gold22.toLocaleString('en-IN')}` : 'N/A'}</td>
-                                        <td style={{ padding: '0.85rem 1rem', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)' }}>{gold24 != null ? `₹ ${gold24.toLocaleString('en-IN')}` : 'N/A'}</td>
-                                        <td style={{ padding: '0.85rem 1rem', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)' }}>{silver != null ? `₹ ${silver.toLocaleString('en-IN')}` : 'N/A'}</td>
-                                    </tr>
-                                );
-                            })}
+                            {rows.map((row) => (
+                                <tr key={row.label}>
+                                    <td style={{ padding: '0.85rem 1rem', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)' }}>{row.label}</td>
+                                    <td style={{ padding: '0.85rem 1rem', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)' }}>
+                                        {row.value != null ? `₹ ${Number(row.value).toLocaleString('en-IN')}` : 'N/A'}
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>

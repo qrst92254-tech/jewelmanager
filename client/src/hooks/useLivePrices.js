@@ -79,7 +79,7 @@ export function useLivePrices() {
     error,
     lastFetched,
     refetch: fetchPrices,
-    isLive: prices?.source === 'live' || prices?.source === 'rapidapi',
+    isLive: prices?.source === 'goodreturns',
     isFallback: prices?.is_fallback === true
   };
 }

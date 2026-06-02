@@ -51,11 +51,12 @@ const useStore = create(devtools((set, get) => ({
                 }
             });
             if (!response.ok) throw new Error('Failed to fetch prices');
-            const data = await response.json();
+            const result = await response.json();
+            const payload = result.data || result;
             set({ 
                 livePrices: { 
-                    prices: data.prices, 
-                    lastUpdated: data.last_updated, 
+                    prices: payload, 
+                    lastUpdated: result.timestamp || payload.last_updated || new Date().toISOString(), 
                     loading: false, 
                     error: null 
                 } 

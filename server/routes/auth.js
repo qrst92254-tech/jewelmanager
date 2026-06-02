@@ -62,6 +62,25 @@ router.get('/dashboard-stats', verifyToken, (req, res) => {
         const uniqueProducts = totalProductsRows?.[0]?.count || 0;
         const totalStock = totalProductsRows?.[0]?.total_stock || 0;
 
+        const todaySalesRes = db.exec(`
+            SELECT COUNT(id) as count, SUM(final_amount) as revenue 
+            FROM sales 
+            WHERE DATE(sale_date) = DATE('now')
+        `);
+        const todaySalesRows = convertSqljsResult(todaySalesRes) || [];
+        const salesToday = todaySalesRows?.[0]?.count || 0;
+        const todayRevenue = todaySalesRows?.[0]?.revenue || 0;
+
+        const lowStockRes = db.exec(`
+            SELECT id, sku, name, quantity, stock_alert_threshold 
+            FROM products 
+            WHERE quantity <= stock_alert_threshold 
+            ORDER BY quantity ASC 
+            LIMIT 5
+        `);
+        const lowStockItems = convertSqljsResult(lowStockRes) || [];
+        const lowStockCount = lowStockItems.length;
+
         const recentSalesRes = db.exec(`
             SELECT id, bill_number, customer_name, final_amount, sale_date 
             FROM sales 
@@ -75,6 +94,10 @@ router.get('/dashboard-stats', verifyToken, (req, res) => {
             totalRevenue,
             uniqueProducts,
             totalStock,
+            salesToday,
+            todayRevenue,
+            lowStockCount,
+            lowStockItems,
             recentSales
         });
 

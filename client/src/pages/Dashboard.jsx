@@ -1,21 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, AlertCircle, ShoppingBag, Package, Plus, FileText, BarChart2, Users, Hammer, Coins, Wrench, Calendar } from 'lucide-react';
+import { TrendingUp, AlertCircle, ShoppingBag, Package, Plus, Users, Hammer, Coins, Wrench, Calendar } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import useStore from '../store/useStore';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { useMetalRates } from '../hooks/useMetalRates';
-
-const API_URL = '';
-
-const mockChartData = [
-  { name: 'Mon', sales: 4000 },
-  { name: 'Tue', sales: 3000 },
-  { name: 'Wed', sales: 2000 },
-  { name: 'Thu', sales: 2780 },
-  { name: 'Fri', sales: 1890 },
-  { name: 'Sat', sales: 2390 },
-  { name: 'Sun', sales: 3490 },
-];
 
 const Dashboard = () => {
     const [stats, setStats] = useState(null);
@@ -23,11 +10,6 @@ const Dashboard = () => {
     const [error, setError] = useState(null);
     const { data: rateData, loading: ratesLoading, error: ratesError } = useMetalRates();
     const navigate = useNavigate();
-    const defaultCity = 'Chennai';
-    const defaultCityRates = rateData?.gold?.[defaultCity] || {};
-    const defaultCity22K = defaultCityRates?.['22K'];
-    const defaultCity24K = defaultCityRates?.['24K'];
-    const defaultCitySilver = rateData?.silver?.[defaultCity]?.perGram;
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -38,7 +20,7 @@ const Dashboard = () => {
             }
 
             try {
-                const response = await fetch(`${API_URL}/api/auth/dashboard-stats`, {
+                const response = await fetch('/api/auth/dashboard-stats', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
@@ -54,14 +36,7 @@ const Dashboard = () => {
                 const data = await response.json();
                 setStats(data);
             } catch (err) {
-                // If API is down, use mock data so UI still looks good
-                setStats({
-                    totalRevenue: 45200,
-                    totalSales: 12,
-                    uniqueProducts: 124,
-                    totalStock: 820000,
-                    recentSales: []
-                });
+                setError(err.message || 'Unable to load dashboard data.');
             } finally {
                 setLoading(false);
             }
@@ -70,6 +45,13 @@ const Dashboard = () => {
         fetchStats();
     }, [navigate]);
 
+    const recentSalesChartData = stats?.recentSales?.map((sale, index) => ({
+        name: sale.bill_number || `Sale ${index + 1}`,
+        value: Number(sale.final_amount) || 0,
+        date: sale.sale_date ? new Date(sale.sale_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''
+    })) || [];
+
+    const lowStockItems = stats?.lowStockItems || [];
 
     if (loading) {
         return (
@@ -93,33 +75,33 @@ const Dashboard = () => {
             
             {/* Top Stats Row */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
-                <StatCard 
-                    title="Today's Sales"
-                    value={`₹ ${(stats?.totalRevenue || 0).toLocaleString('en-IN')}`}
-                    trend="↑ 12% today"
-                    trendUp={true}
+                <StatCard
+                    title="Today's Revenue"
+                    value={`₹ ${(Number(stats?.todayRevenue) || 0).toLocaleString('en-IN')}`}
+                    trend={`Sales: ${stats?.salesToday || 0}`}
+                    trendUp={stats?.salesToday > 0}
                     icon={<ShoppingBag color="var(--gold)" />}
                 />
-                <StatCard 
+                <StatCard
                     title="Gold Rate (22K)"
-                    value={ratesLoading ? 'Loading...' : defaultCity22K ? `₹ ${defaultCity22K.toLocaleString('en-IN')}` : 'Unavailable'}
-                    trend={ratesError ? 'Could not load rates' : `Chennai 22K`}
+                    value={ratesLoading ? 'Loading...' : rateData?.gold_22k_per_gram ? `₹ ${Number(rateData.gold_22k_per_gram).toLocaleString('en-IN')}` : 'Unavailable'}
+                    trend={ratesError ? 'Rate service unavailable' : 'Live market source'}
                     trendUp={!ratesError}
                     icon={<TrendingUp color="var(--gold)" />}
                 />
-                <StatCard 
+                <StatCard
                     title="Stock Items"
                     value={`${stats?.uniqueProducts || 0} items`}
-                    trend={`₹ ${(stats?.totalStock || 0).toLocaleString('en-IN')} value`}
+                    trend={`Qty: ${Number(stats?.totalStock || 0).toLocaleString('en-IN')}`}
                     trendUp={true}
                     icon={<Package color="var(--gold)" />}
                 />
-                <StatCard 
+                <StatCard
                     title="Low Stock Alerts"
-                    value="3 items ⚠️"
-                    trend="Need restock"
-                    trendUp={false}
-                    icon={<AlertCircle color="#FF5252" />}
+                    value={`${stats?.lowStockCount || 0} items`}
+                    trend={lowStockItems.length > 0 ? 'Review inventory' : 'No low items'}
+                    trendUp={lowStockItems.length === 0}
+                    icon={<AlertCircle color={lowStockItems.length > 0 ? '#FF5252' : 'var(--gold)'} />}
                 />
             </div>
 
@@ -129,41 +111,23 @@ const Dashboard = () => {
                     <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Fetching live gold and silver rates...</div>
                 ) : ratesError ? (
                     <div style={{ color: '#FF5252', fontSize: '0.95rem' }}>
-                        ⚠ Could not load rates. Make sure the rate proxy server is running on port 3001.
+                        ⚠ Could not load rates. Check backend connectivity or refresh the page.
                     </div>
                 ) : (
-                    <>
-                        <div style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '1rem' }}>
-                            Last updated: {rateData?.date ? new Date(rateData.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today'}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                        <div style={{ padding: '1rem', background: 'var(--bg)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                            <div style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Gold 22K</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{rateData?.gold_22k_per_gram ? `₹ ${Number(rateData.gold_22k_per_gram).toLocaleString('en-IN')}` : 'N/A'}</div>
                         </div>
-                        <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
-                                    <tr>
-                                        <th style={{ padding: '0.75rem 1rem', textAlign: 'left', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>City</th>
-                                        <th style={{ padding: '0.75rem 1rem', textAlign: 'left', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>Gold 22K</th>
-                                        <th style={{ padding: '0.75rem 1rem', textAlign: 'left', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>Gold 24K</th>
-                                        <th style={{ padding: '0.75rem 1rem', textAlign: 'left', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>Silver</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {['Chennai', 'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Kolkata', 'Ahmedabad', 'Pune'].map((city) => {
-                                        const gold22 = rateData?.gold?.[city]?.['22K'];
-                                        const gold24 = rateData?.gold?.[city]?.['24K'];
-                                        const silver = rateData?.silver?.[city]?.perGram;
-                                        return (
-                                            <tr key={city}>
-                                                <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)' }}>{city}</td>
-                                                <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)' }}>{gold22 != null ? `₹ ${gold22.toLocaleString('en-IN')}` : 'N/A'}</td>
-                                                <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)' }}>{gold24 != null ? `₹ ${gold24.toLocaleString('en-IN')}` : 'N/A'}</td>
-                                                <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)' }}>{silver != null ? `₹ ${silver.toLocaleString('en-IN')}` : 'N/A'}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                        <div style={{ padding: '1rem', background: 'var(--bg)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                            <div style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Gold 24K</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{rateData?.gold_24k_per_gram ? `₹ ${Number(rateData.gold_24k_per_gram).toLocaleString('en-IN')}` : 'N/A'}</div>
                         </div>
-                    </>
+                        <div style={{ padding: '1rem', background: 'var(--bg)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                            <div style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Silver per gram</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{rateData?.silver_999_per_gram ? `₹ ${Number(rateData.silver_999_per_gram).toLocaleString('en-IN')}` : 'N/A'}</div>
+                        </div>
+                    </div>
                 )}
             </div>
 
@@ -173,18 +137,24 @@ const Dashboard = () => {
                 <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
                     <h2 style={{ fontSize: '24px', marginBottom: '1.5rem' }}>Sales Overview</h2>
                     <div style={{ flexGrow: 1, minHeight: '300px' }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={mockChartData}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} tickFormatter={(value) => `₹${value}`} />
-                                <Tooltip 
-                                    cursor={{ fill: 'rgba(245, 230, 178, 0.2)' }}
-                                    contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-md)' }} 
-                                />
-                                <Bar dataKey="sales" fill="var(--gold)" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                        {recentSalesChartData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={recentSalesChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} tickFormatter={(value) => `₹${value}`} />
+                                    <Tooltip 
+                                        cursor={{ fill: 'rgba(245, 230, 178, 0.2)' }}
+                                        contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-md)' }} 
+                                    />
+                                    <Bar dataKey="value" fill="var(--gold)" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', padding: '1.5rem' }}>
+                                No recent sales data available yet.
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -192,18 +162,21 @@ const Dashboard = () => {
                 <div className="card">
                     <h2 style={{ fontSize: '24px', marginBottom: '1.5rem' }}>Alerts</h2>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <div style={{ padding: '1rem', borderLeft: '3px solid #FF5252', background: '#FFF4F4', borderRadius: '4px' }}>
-                            <div style={{ fontWeight: 600, color: '#D32F2F', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <AlertCircle size={16} /> Low Stock
+                        {lowStockItems.length > 0 ? (
+                            lowStockItems.map((item) => (
+                                <div key={item.id} style={{ padding: '1rem', borderLeft: '3px solid #FF5252', background: '#FFF4F4', borderRadius: '4px' }}>
+                                    <div style={{ fontWeight: 600, color: '#D32F2F', fontSize: '0.9rem' }}>{item.name || item.sku || 'Item'} is low</div>
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
+                                        Qty: {item.quantity} · Threshold: {item.stock_alert_threshold}
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div style={{ padding: '1rem', borderLeft: '3px solid var(--gold)', background: 'var(--gold-light)', borderRadius: '4px' }}>
+                                <div style={{ fontWeight: 600, color: 'var(--gold-dark)', fontSize: '0.9rem' }}>Inventory is healthy.</div>
+                                <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>No low-stock items detected.</div>
                             </div>
-                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>Gold Chain 22K (SKU-102) is running low.</div>
-                        </div>
-                        <div style={{ padding: '1rem', borderLeft: '3px solid var(--gold)', background: 'var(--gold-light)', opacity: 0.8, borderRadius: '4px' }}>
-                            <div style={{ fontWeight: 600, color: 'var(--gold-dark)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <TrendingUp size={16} /> Price Update
-                            </div>
-                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>Gold rate increased by ₹120/g today.</div>
-                        </div>
+                        )}
                     </div>
                 </div>
             </div>
