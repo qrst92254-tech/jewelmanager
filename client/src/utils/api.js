@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL || 'https://jewelmanager.onrender.com';
 
 function getHeaders() {
   const token = localStorage.getItem('jewel_token');
