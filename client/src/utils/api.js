@@ -1,4 +1,6 @@
-const API_URL = import.meta.env.VITE_API_URL || 'https://jewelmanager.onrender.com';
+// Use relative paths: in dev, Vite proxy handles /api/* → localhost:3001
+// In production, frontend and backend share same domain
+const API_URL = '';
 
 function getHeaders() {
   const token = localStorage.getItem('jewel_token');
