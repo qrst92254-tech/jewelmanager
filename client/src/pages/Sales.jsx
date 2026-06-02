@@ -4,7 +4,7 @@ import { Plus, Eye, Printer, Trash2, ShoppingCart, X, Share2 } from 'lucide-reac
 import SaleForm from '../components/SaleForm';
 import BillTemplate from '../components/BillTemplate';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = '';
 
 const Sales = () => {
     const [sales, setSales] = useState([]);

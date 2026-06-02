@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { Calendar, FileText, Download, BarChart2, ShieldAlert, TrendingUp, IndianRupee, ArrowDownCircle, AlertCircle } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = '';
 
 const Reports = () => {
     const [activeTab, setActiveTab] = useState('financial');

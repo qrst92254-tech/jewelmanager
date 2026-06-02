@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Calendar, Award, Gift, FileText, X, CheckCircle, CreditCard, ChevronRight } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = '';
 
 const Schemes = () => {
     const [plans, setPlans] = useState([]);

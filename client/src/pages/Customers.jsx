@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, User, CreditCard, Award, UserCheck, Calendar, MapPin, Phone, Mail, X, Trash2, Edit } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = '';
 
 const Customers = () => {
     const [customers, setCustomers] = useState([]);

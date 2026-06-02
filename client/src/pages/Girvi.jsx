@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Scale, ShieldAlert, Award, FileText, X, CheckCircle, TrendingUp, AlertTriangle, Share2 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = '';
 
 const Girvi = () => {
     const [loans, setLoans] = useState([]);

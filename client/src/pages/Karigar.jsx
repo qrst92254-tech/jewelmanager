@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, User, Hammer, ShieldAlert, Award, FileText, ArrowUpRight, ArrowDownLeft, X, CheckCircle } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = '';
 
 const Karigar = () => {
     const [karigars, setKarigars] = useState([]);

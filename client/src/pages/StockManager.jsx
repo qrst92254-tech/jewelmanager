@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import ProductForm from '../components/ProductForm';
 import { Edit, Trash2, PackageSearch, Plus, Search, Filter, X, Printer } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = '';
 
 const StockManager = () => {
     const [products, setProducts] = useState([]);
