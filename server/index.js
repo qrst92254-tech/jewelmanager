@@ -50,11 +50,6 @@ app.use((err, req, res, next) => {
     next(err);
 });
 
-// Root
-app.get('/', (req, res) => {
-    res.send('JewelManager Pro API is running...');
-});
-
 // API Routes
 app.use('/api/prices', priceRoutes);
 app.use('/api/products', productRoutes);
@@ -76,12 +71,6 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
-// Centralized error handling
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ error: err.message || 'Something broke!' });
-});
-
 // CHANGE 3c: Serve the built React frontend from dist/ folder
 // The dist/ folder is created when you run: npm run build
 const path = require('path');
@@ -91,6 +80,12 @@ app.use(express.static(path.join(__dirname, '../dist')));
 // This allows React Router to handle client-side routing in production
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
+
+// Centralized error handling
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ error: err.message || 'Something broke!' });
 });
 
 // Initialize and start the server
