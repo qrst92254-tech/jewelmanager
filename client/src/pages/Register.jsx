@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus } from 'lucide-react';
 
-const API_URL = 'http://localhost:3001/api';
+// Use relative paths: in dev, Vite proxy handles /api/* → localhost:3001
+// In production, frontend and backend share same domain
+const API_URL = '';
 
 const Register = () => {
     const [username, setUsername] = useState('');
