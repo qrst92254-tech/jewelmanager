@@ -7,6 +7,13 @@ async function checkSubscription(req, res, next) {
     return res.redirect('/login');
   }
 
+  try {
+    ensureSupabaseConfigured();
+  } catch (err) {
+    console.error('Supabase not configured:', err.message);
+    return res.status(500).send('Server misconfiguration: subscription check unavailable.');
+  }
+
   const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(accessToken);
   if (userError || !userData?.user) {
     return res.redirect('/login');

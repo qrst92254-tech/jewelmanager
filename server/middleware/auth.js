@@ -1,4 +1,4 @@
-const { supabaseAdmin } = require('../services/supabase');
+const { supabaseAdmin, ensureSupabaseConfigured } = require('../services/supabase');
 
 function requireFormOrJson(req, res, next) {
   const type = req.headers['content-type'] || '';
@@ -20,6 +20,13 @@ async function requireAuth(req, res, next) {
   const accessToken = getTokenFromRequest(req);
   if (!accessToken) {
     return res.redirect('/login');
+  }
+
+  try {
+    ensureSupabaseConfigured();
+  } catch (err) {
+    console.error('Supabase not configured:', err.message);
+    return res.status(500).send('Server misconfiguration: authentication unavailable.');
   }
 
   const { data, error } = await supabaseAdmin.auth.getUser(accessToken);

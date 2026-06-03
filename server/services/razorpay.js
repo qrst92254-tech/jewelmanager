@@ -1,23 +1,27 @@
 const crypto = require('crypto');
-const Razorpay = require('razorpay');
-
-const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
-const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
-
-if (!razorpayKeyId || !razorpayKeySecret) {
-  throw new Error('Missing Razorpay env vars. Ensure RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are set.');
+let Razorpay;
+try {
+  Razorpay = require('razorpay');
+} catch (e) {
+  Razorpay = null;
 }
 
-const razorpay = new Razorpay({
-  key_id: razorpayKeyId,
-  key_secret: razorpayKeySecret,
-});
+const razorpayKeyId = process.env.RAZORPAY_KEY_ID || null;
+const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET || null;
+
+let razorpay = null;
+if (Razorpay && razorpayKeyId && razorpayKeySecret) {
+  try {
+    razorpay = new Razorpay({ key_id: razorpayKeyId, key_secret: razorpayKeySecret });
+  } catch (err) {
+    console.error('Failed to initialize Razorpay client:', err.message);
+    razorpay = null;
+  }
+}
 
 function verifyPaymentSignature(payload, signature) {
-  const expected = crypto
-    .createHmac('sha256', razorpayKeySecret)
-    .update(payload)
-    .digest('hex');
+  if (!razorpayKeySecret) return false;
+  const expected = crypto.createHmac('sha256', razorpayKeySecret).update(payload).digest('hex');
   return expected === signature;
 }
 
