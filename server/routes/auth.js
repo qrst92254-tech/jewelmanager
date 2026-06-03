@@ -1,111 +1,144 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { getDatabase, saveDatabase, convertSqljsResult } = require('../db/database');
+const crypto = require('crypto');
+const { supabase, supabaseAdmin } = require('../services/supabase');
+const { requireFormOrJson } = require('../middleware/auth');
 
 const router = express.Router();
 
-// POST /api/auth/register
-router.post('/register', (req, res) => {
-    return res.status(403).json({ 
-        success: false, 
-        message: 'Registration is disabled. Use the default credentials.' 
-    });
+router.get('/signup', (req, res) => {
+    return res.render('signup', { error: null });
 });
 
-// POST /api/auth/login
-router.post('/login', (req, res) => {
-    const { username, password } = req.body;
-    const validUser = process.env.ADMIN_USERNAME || 'admin';
-    const validPass = process.env.ADMIN_PASSWORD || 'admin123';
-    
-    if (username === validUser && password === validPass) {
-        const token = jwt.sign(
-            { username, role: 'admin' },
-            process.env.JWT_SECRET || 'jewel_secret_key',
-            { expiresIn: '7d' }
-        );
-        return res.json({ success: true, token, username });
-    }
-    return res.status(401).json({ success: false, message: 'Invalid credentials' });
+router.get('/login', (req, res) => {
+    return res.render('login', { error: null });
 });
 
-// Middleware to verify token
-const verifyToken = (req, res, next) => {
-    let token = req.headers['authorization']?.split(' ')[1]; // Bearer <token>
-    if (!token) {
-        token = req.headers['authorization']; // fallback if no Bearer
+router.post('/api/auth/signup', requireFormOrJson, async (req, res) => {
+    const { full_name, email, password, phone, city } = req.body;
+    if (!full_name || !email || !password || !phone || !city) {
+        return res.status(400).render('signup', { error: 'All fields are required.' });
     }
-    if (!token) {
-        return res.status(403).json({ error: 'A token is required for authentication.' });
+
+    if (!/^[0-9]{10}$/.test(phone)) {
+        return res.status(400).render('signup', { error: 'Phone number must be 10 digits.' });
     }
+
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'jewel_secret_key');
-        req.user = decoded;
-    } catch (err) {
-        return res.status(401).json({ error: 'Invalid Token.' });
-    }
-    return next();
-};
-
-// GET /api/auth/dashboard-stats (Protected Route)
-router.get('/dashboard-stats', verifyToken, (req, res) => {
-    const db = getDatabase();
-    try {
-        const totalSalesRes = db.exec("SELECT COUNT(id) as count, SUM(final_amount) as revenue FROM sales");
-        const totalSalesRows = convertSqljsResult(totalSalesRes) || [];
-        const totalSales = totalSalesRows?.[0]?.count || 0;
-        const totalRevenue = totalSalesRows?.[0]?.revenue || 0;
-
-        const totalProductsRes = db.exec("SELECT COUNT(id) as count, SUM(quantity) as total_stock FROM products");
-        const totalProductsRows = convertSqljsResult(totalProductsRes) || [];
-        const uniqueProducts = totalProductsRows?.[0]?.count || 0;
-        const totalStock = totalProductsRows?.[0]?.total_stock || 0;
-
-        const todaySalesRes = db.exec(`
-            SELECT COUNT(id) as count, SUM(final_amount) as revenue 
-            FROM sales 
-            WHERE DATE(sale_date) = DATE('now')
-        `);
-        const todaySalesRows = convertSqljsResult(todaySalesRes) || [];
-        const salesToday = todaySalesRows?.[0]?.count || 0;
-        const todayRevenue = todaySalesRows?.[0]?.revenue || 0;
-
-        const lowStockRes = db.exec(`
-            SELECT id, sku, name, quantity, stock_alert_threshold 
-            FROM products 
-            WHERE quantity <= stock_alert_threshold 
-            ORDER BY quantity ASC 
-            LIMIT 5
-        `);
-        const lowStockItems = convertSqljsResult(lowStockRes) || [];
-        const lowStockCount = lowStockItems.length;
-
-        const recentSalesRes = db.exec(`
-            SELECT id, bill_number, customer_name, final_amount, sale_date 
-            FROM sales 
-            ORDER BY sale_date DESC 
-            LIMIT 5
-        `);
-        const recentSales = convertSqljsResult(recentSalesRes) || [];
-
-        res.json({
-            totalSales,
-            totalRevenue,
-            uniqueProducts,
-            totalStock,
-            salesToday,
-            todayRevenue,
-            lowStockCount,
-            lowStockItems,
-            recentSales
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
         });
 
+        if (error) {
+            return res.status(400).render('signup', { error: error.message });
+        }
+
+        const user = data.user;
+        if (!user) {
+            return res.status(500).render('signup', { error: 'Unable to create account. Please try again.' });
+        }
+
+        const userInsert = await supabaseAdmin.from('users').insert({
+            id: user.id,
+            email,
+            full_name,
+            phone,
+            city,
+            role: 'user',
+            created_at: new Date().toISOString(),
+        });
+
+        if (userInsert.error) {
+            console.error('Supabase users insert failed:', userInsert.error);
+            return res.status(500).render('signup', { error: 'Unable to save your profile. Please contact support.' });
+        }
+
+        const trialEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        const subscriptionInsert = await supabaseAdmin.from('subscriptions').insert({
+            id: crypto.randomUUID(),
+            user_id: user.id,
+            plan: 'trial',
+            status: 'active',
+            razorpay_subscription_id: null,
+            razorpay_payment_id: null,
+            trial_started_at: new Date().toISOString(),
+            current_period_end: trialEnd,
+            created_at: new Date().toISOString(),
+        });
+
+        if (subscriptionInsert.error) {
+            console.error('Supabase subscriptions insert failed:', subscriptionInsert.error);
+            return res.status(500).render('signup', { error: 'Unable to create trial subscription. Please contact support.' });
+        }
+
+        if (data.session?.access_token) {
+            res.cookie('sb-access-token', data.session.access_token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 7 * 24 * 60 * 60 * 1000,
+            });
+        }
+
+        return res.redirect('/pricing');
     } catch (error) {
-        console.error("Dashboard stats error:", error);
-        res.status(500).json({ error: "Failed to fetch dashboard statistics." });
+        console.error('Signup error:', error);
+        return res.status(500).render('signup', { error: 'Unable to create account right now. Please try again later.' });
     }
 });
 
+router.post('/api/auth/login', requireFormOrJson, async (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) {
+        return res.status(400).render('login', { error: 'Email and password are required.' });
+    }
+
+    try {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+            return res.status(401).render('login', { error: error.message });
+        }
+
+        if (data.session?.access_token) {
+            res.cookie('sb-access-token', data.session.access_token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 7 * 24 * 60 * 60 * 1000,
+            });
+        }
+
+        return res.redirect('/dashboard');
+    } catch (error) {
+        console.error('Login error:', error);
+        return res.status(500).render('login', { error: 'Unable to sign in right now. Please try again later.' });
+    }
+});
+
+// Accept a client-side Supabase access token and set a secure cookie server-side
+router.post('/api/auth/session', requireFormOrJson, async (req, res) => {
+    const { access_token } = req.body;
+    if (!access_token) {
+        return res.status(400).json({ error: 'Missing access_token' });
+    }
+
+    try {
+        const { data, error } = await supabase.auth.getUser(access_token);
+        if (error || !data?.user) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+
+        res.cookie('sb-access-token', access_token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+        return res.json({ success: true });
+    } catch (err) {
+        console.error('Session set failed:', err);
+        return res.status(500).json({ error: 'Unable to set session' });
+    }
+});
 
 module.exports = router;

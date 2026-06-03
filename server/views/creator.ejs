@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Creator Admin - JewelManager Pro</title>
+</head>
+<body>
+  <h1>Creator Admin Panel</h1>
+  <% if (error) { %>
+    <div style="color:red"><%= error %></div>
+  <% } %>
+
+  <div>
+    <h2>Total Users: <%= counts.total %></h2>
+    <div>Trial: <%= counts.trial %> | Monthly: <%= counts.monthly %> | Lifetime: <%= counts.lifetime %></div>
+  </div>
+
+  <div>
+    <input id="search" placeholder="Search by name or email" />
+    <button id="export">Export CSV</button>
+  </div>
+
+  <table border="1" id="users-table">
+    <thead>
+      <tr><th>Name</th><th>Email</th><th>Phone</th><th>City</th><th>Plan</th><th>Status</th><th>Joined</th><th>Renewal</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+      <% users.forEach(function(u){ %>
+        <tr data-email="<%= u.email %>" data-name="<%= u.name %>" data-id="<%= u.id %>">
+          <td><%= u.name %></td>
+          <td><%= u.email %></td>
+          <td><%= u.phone %></td>
+          <td><%= u.city %></td>
+          <td><%= u.plan %></td>
+          <td><%= u.status %></td>
+          <td><%= u.joinedAt %></td>
+          <td><%= u.renewalDate %></td>
+          <td><button class="delete">Delete User</button></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+  <script>
+    document.getElementById('export').addEventListener('click', () => {
+      window.location = '/creator/export';
+    });
+
+    document.getElementById('search').addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase();
+      document.querySelectorAll('#users-table tbody tr').forEach(row => {
+        const name = row.dataset.name.toLowerCase();
+        const email = row.dataset.email.toLowerCase();
+        row.style.display = (name.includes(q) || email.includes(q)) ? '' : 'none';
+      });
+    });
+
+    document.querySelectorAll('.delete').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const row = e.target.closest('tr');
+        const id = row.dataset.id;
+        const name = row.dataset.name;
+        if (!confirm(`Are you sure you want to delete ${name}? This cannot be undone.`)) return;
+        const res = await fetch('/creator/delete-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: id }) });
+        const json = await res.json();
+        if (json.success) {
+          row.remove();
+          alert('User deleted');
+        } else {
+          alert('Failed to delete user');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

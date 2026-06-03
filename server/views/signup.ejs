@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Sign Up - JewelManager Pro</title>
+</head>
+<body>
+  <h1>Sign Up</h1>
+  <% if (error) { %>
+    <div style="color:red"><%= error %></div>
+  <% } %>
+  <form method="post" action="/api/auth/signup">
+    <label>Full Name: <input name="full_name" required /></label><br />
+    <label>Email: <input type="email" name="email" required /></label><br />
+    <label>Password: <input type="password" name="password" required /></label><br />
+    <label>Phone: <input name="phone" required pattern="[0-9]{10}" /></label><br />
+    <label>City: <input name="city" required /></label><br />
+    <button type="submit">Create Account & Start Free Trial</button>
+  </form>
+</body>
+</html>
