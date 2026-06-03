@@ -3,16 +3,40 @@
 <head>
   <meta charset="utf-8" />
   <title>Login - JewelManager Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" crossorigin href="/assets/index-CRx5Jhhl.css">
 </head>
-<body>
-  <h1>Login</h1>
-  <% if (error) { %>
-    <div style="color:red"><%= error %></div>
-  <% } %>
-  <form method="post" action="/api/auth/login">
-    <label>Email: <input type="email" name="email" required /></label><br />
-    <label>Password: <input type="password" name="password" required /></label><br />
-    <button type="submit">Login</button>
-  </form>
+<body style="background-color: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0;">
+  <div class="card fade-in" style="width: 100%; max-width: 400px; padding: 2.5rem 2rem;">
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <h1 class="gold-text" style="font-size: 2.5rem; margin-bottom: 0.5rem;">💎 JewelManager Pro</h1>
+      <p style="color: var(--text-secondary); font-size: 0.95rem;">Sign in to your account</p>
+    </div>
+    
+    <% if (error) { %>
+      <div style="background-color: rgba(255, 82, 82, 0.1); border: 1px solid #FF5252; color: #FF5252; padding: 1rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem; font-size: 0.9rem; text-align: center;">
+        <%= error %>
+      </div>
+    <% } %>
+    
+    <form method="post" action="/login">
+      <div style="margin-bottom: 1.25rem;">
+        <label>Email Address</label>
+        <input type="email" name="email" placeholder="Enter your email" required />
+      </div>
+      <div style="margin-bottom: 1.5rem;">
+        <label>Password</label>
+        <input type="password" name="password" placeholder="Enter your password" required />
+      </div>
+      <button type="submit" class="btn-primary" style="width: 100%; padding: 0.85rem; font-size: 1rem;">Login</button>
+    </form>
+    
+    <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem;">
+      <span style="color: var(--text-secondary);">Don't have an account? </span>
+      <a href="/signup" style="color: var(--gold); text-decoration: none; font-weight: 500;">Sign Up</a>
+    </div>
+  </div>
 </body>
 </html>

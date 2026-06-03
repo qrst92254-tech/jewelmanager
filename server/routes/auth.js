@@ -13,7 +13,7 @@ router.get('/login', (req, res) => {
     return res.render('login', { error: null });
 });
 
-router.post('/api/auth/signup', requireFormOrJson, async (req, res) => {
+router.post('/signup', requireFormOrJson, async (req, res) => {
     const { full_name, email, password, phone, city } = req.body;
     if (!full_name || !email || !password || !phone || !city) {
         return res.status(400).render('signup', { error: 'All fields are required.' });
@@ -30,6 +30,7 @@ router.post('/api/auth/signup', requireFormOrJson, async (req, res) => {
         });
 
         if (error) {
+            console.error('Supabase signup error:', error);
             return res.status(400).render('signup', { error: error.message });
         }
 
@@ -80,14 +81,14 @@ router.post('/api/auth/signup', requireFormOrJson, async (req, res) => {
             });
         }
 
-        return res.redirect('/pricing');
+        return res.redirect('/dashboard');
     } catch (error) {
         console.error('Signup error:', error);
         return res.status(500).render('signup', { error: 'Unable to create account right now. Please try again later.' });
     }
 });
 
-router.post('/api/auth/login', requireFormOrJson, async (req, res) => {
+router.post('/login', requireFormOrJson, async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).render('login', { error: 'Email and password are required.' });
@@ -96,6 +97,7 @@ router.post('/api/auth/login', requireFormOrJson, async (req, res) => {
     try {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
+            console.error('Supabase login error:', error);
             return res.status(401).render('login', { error: error.message });
         }
 
@@ -116,7 +118,7 @@ router.post('/api/auth/login', requireFormOrJson, async (req, res) => {
 });
 
 // Accept a client-side Supabase access token and set a secure cookie server-side
-router.post('/api/auth/session', requireFormOrJson, async (req, res) => {
+router.post('/session', requireFormOrJson, async (req, res) => {
     const { access_token } = req.body;
     if (!access_token) {
         return res.status(400).json({ error: 'Missing access_token' });

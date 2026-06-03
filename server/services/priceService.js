@@ -200,7 +200,13 @@ function applyDerivedRates(prices) {
 }
 
 async function scrapeRates() {
-  const goldResponse = await fetch('https://www.goodreturns.in/gold-rates/');
+  const defaultHeaders = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8'
+  };
+
+  const goldResponse = await fetch('https://www.goodreturns.in/gold-rates/', { headers: defaultHeaders });
   if (!goldResponse.ok) {
     throw new Error(`Gold rates page failed with status ${goldResponse.status}`);
   }
@@ -208,7 +214,7 @@ async function scrapeRates() {
   const $gold = cheerio.load(goldHtml);
   const goldRates = scrapeGoldRates($gold);
 
-  const silverResponse = await fetch('https://www.goodreturns.in/silver-rates/');
+  const silverResponse = await fetch('https://www.goodreturns.in/silver-rates/', { headers: defaultHeaders });
   if (!silverResponse.ok) {
     throw new Error(`Silver rates page failed with status ${silverResponse.status}`);
   }

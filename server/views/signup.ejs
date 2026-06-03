@@ -3,19 +3,52 @@
 <head>
   <meta charset="utf-8" />
   <title>Sign Up - JewelManager Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" crossorigin href="/assets/index-CRx5Jhhl.css">
 </head>
-<body>
-  <h1>Sign Up</h1>
-  <% if (error) { %>
-    <div style="color:red"><%= error %></div>
-  <% } %>
-  <form method="post" action="/api/auth/signup">
-    <label>Full Name: <input name="full_name" required /></label><br />
-    <label>Email: <input type="email" name="email" required /></label><br />
-    <label>Password: <input type="password" name="password" required /></label><br />
-    <label>Phone: <input name="phone" required pattern="[0-9]{10}" /></label><br />
-    <label>City: <input name="city" required /></label><br />
-    <button type="submit">Create Account & Start Free Trial</button>
-  </form>
+<body style="background-color: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 2rem 0;">
+  <div class="card fade-in" style="width: 100%; max-width: 450px; padding: 2.5rem 2rem;">
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <h1 class="gold-text" style="font-size: 2.5rem; margin-bottom: 0.5rem;">💎 JewelManager Pro</h1>
+      <p style="color: var(--text-secondary); font-size: 0.95rem;">Create your account and start your 7-day free trial</p>
+    </div>
+    
+    <% if (error) { %>
+      <div style="background-color: rgba(255, 82, 82, 0.1); border: 1px solid #FF5252; color: #FF5252; padding: 1rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem; font-size: 0.9rem; text-align: center;">
+        <%= error %>
+      </div>
+    <% } %>
+    
+    <form method="post" action="/signup">
+      <div style="margin-bottom: 1.25rem;">
+        <label>Full Name</label>
+        <input name="full_name" placeholder="Enter your full name" required />
+      </div>
+      <div style="margin-bottom: 1.25rem;">
+        <label>Email Address</label>
+        <input type="email" name="email" placeholder="Enter your email" required />
+      </div>
+      <div style="margin-bottom: 1.25rem;">
+        <label>Password</label>
+        <input type="password" name="password" placeholder="Create a password" required />
+      </div>
+      <div style="margin-bottom: 1.25rem;">
+        <label>Phone Number (10 digits)</label>
+        <input name="phone" placeholder="Enter 10-digit phone number" required pattern="[0-9]{10}" />
+      </div>
+      <div style="margin-bottom: 1.5rem;">
+        <label>City</label>
+        <input name="city" placeholder="Enter your city" required />
+      </div>
+      <button type="submit" class="btn-primary" style="width: 100%; padding: 0.85rem; font-size: 1rem;">Create Account & Start Free Trial</button>
+    </form>
+    
+    <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem;">
+      <span style="color: var(--text-secondary);">Already have an account? </span>
+      <a href="/login" style="color: var(--gold); text-decoration: none; font-weight: 500;">Login</a>
+    </div>
+  </div>
 </body>
 </html>
