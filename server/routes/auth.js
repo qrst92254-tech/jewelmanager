@@ -120,6 +120,10 @@ router.post('/login', requireFormOrJson, async (req, res) => {
             });
         }
 
+        const isJson = (req.headers['content-type'] || '').includes('application/json');
+        if (isJson) {
+            return res.json({ success: true, token: data.session?.access_token, email });
+        }
         return res.redirect('/dashboard');
     } catch (error) {
         console.error('Login error:', error);

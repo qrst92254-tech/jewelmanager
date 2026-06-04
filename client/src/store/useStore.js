@@ -42,9 +42,8 @@ const useStore = create(devtools((set, get) => ({
         set(state => ({ livePrices: { ...state.livePrices, loading: true } }));
         try {
             // Use relative paths: in dev, Vite proxy handles /api/* → localhost:3001
-            const API_URL = '';
             const token = localStorage.getItem('jewel_token');
-            const response = await fetch(`${API_URL}/api/prices/live`, {
+            const response = await fetch('/api/prices/live', {
                 headers: {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` })
@@ -69,8 +68,7 @@ const useStore = create(devtools((set, get) => ({
     // Auth Actions
     login: async (email, password) => {
         // Use relative paths: in dev, Vite proxy handles /api/* → localhost:3001
-        const API_URL = '';
-        const response = await fetch(`${API_URL}/api/auth/login`, {
+        const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),
