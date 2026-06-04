@@ -2,6 +2,10 @@ const { supabaseAdmin } = require('../services/supabase');
 const { getTokenFromRequest } = require('./auth');
 
 async function checkSubscription(req, res, next) {
+  // TODO: Re-enable when Razorpay is configured
+  // Bypassing subscription check for now
+  return next();
+  /*
   const accessToken = getTokenFromRequest(req);
   if (!accessToken) {
     return res.redirect('/login');
@@ -65,6 +69,7 @@ async function checkSubscription(req, res, next) {
   }
 
   return res.redirect('/pricing?message=Please renew your subscription.');
+  */
 }
 
 module.exports = {
