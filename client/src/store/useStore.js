@@ -35,6 +35,7 @@ const useStore = create(devtools((set, get) => ({
         isAuthenticated: !!localStorage.getItem('jewel_token'),
         user: localStorage.getItem('jewel_user') || null,
         token: localStorage.getItem('jewel_token') || null,
+        isAdmin: localStorage.getItem('jewel_is_admin') === 'true',
     },
 
     // Price Actions
@@ -81,7 +82,8 @@ const useStore = create(devtools((set, get) => ({
         if (data.success) {
             localStorage.setItem('jewel_token', data.token);
             localStorage.setItem('jewel_user', data.email);
-            set({ auth: { isAuthenticated: true, user: data.email, token: data.token } });
+            localStorage.setItem('jewel_is_admin', data.isAdmin ? 'true' : 'false');
+            set({ auth: { isAuthenticated: true, user: data.email, token: data.token, isAdmin: !!data.isAdmin } });
         } else {
             throw new Error(data.message || 'Login failed');
         }
@@ -104,7 +106,8 @@ const useStore = create(devtools((set, get) => ({
         }
         localStorage.removeItem('jewel_token');
         localStorage.removeItem('jewel_user');
-        set({ auth: { isAuthenticated: false, user: null, token: null } });
+        localStorage.removeItem('jewel_is_admin');
+        set({ auth: { isAuthenticated: false, user: null, token: null, isAdmin: false } });
     },
 })));
 

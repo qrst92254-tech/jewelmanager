@@ -73,9 +73,46 @@ function convertSqljsResult(res) {
     });
 }
 
+/** Run SELECT with bound parameters (reliable vs raw exec for some sql.js builds). */
+function queryAll(sql, params = []) {
+    const database = getDatabase();
+    const stmt = database.prepare(sql);
+    try {
+        if (params.length) stmt.bind(params);
+        const rows = [];
+        while (stmt.step()) {
+            rows.push(stmt.getAsObject());
+        }
+        return rows;
+    } finally {
+        stmt.free();
+    }
+}
+
+function queryOne(sql, params = []) {
+    const rows = queryAll(sql, params);
+    return rows[0] || null;
+}
+
+function runSql(sql, params = []) {
+    const database = getDatabase();
+    database.run(sql, params);
+    return database.getRowsModified();
+}
+
+function lastInsertRowId() {
+    const database = getDatabase();
+    const res = database.exec('SELECT last_insert_rowid() AS id');
+    return res[0]?.values[0][0];
+}
+
 module.exports = {
     initializeDatabase,
     getDatabase,
     saveDatabase,
     convertSqljsResult,
+    queryAll,
+    queryOne,
+    runSql,
+    lastInsertRowId,
 };

@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 const Navbar = () => {
-    const { isAuthenticated, user, logout } = useStore(state => state.auth);
+    const { isAuthenticated, user, isAdmin, logout } = useStore(state => state.auth);
     const navigate = useNavigate();
     const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -134,7 +134,7 @@ const Navbar = () => {
 
                         <NavSectionTitle>System</NavSectionTitle>
                         <NavItem to="/settings" icon={<Settings size={18} />}>Settings</NavItem>
-                        {(user === import.meta.env.VITE_ADMIN_EMAIL || user === import.meta.env.VITE_CREATOR_EMAIL) && (
+                        {isAdmin && (
                             <NavItem to="/admin/users" icon={<Users size={18} />}>User Management</NavItem>
                         )}
                     </div>

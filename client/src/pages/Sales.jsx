@@ -3,6 +3,7 @@ import { useReactToPrint } from 'react-to-print';
 import { Plus, Eye, Printer, Trash2, ShoppingCart, X, Share2 } from 'lucide-react';
 import SaleForm from '../components/SaleForm';
 import BillTemplate from '../components/BillTemplate';
+import { authFetch } from '../utils/authFetch';
 
 const API_URL = '';
 
@@ -59,19 +60,10 @@ const Sales = () => {
 
     const handleSaveSale = async (saleData) => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const response = await fetch(`${API_URL}/api/sales`, {
+            await authFetch(`${API_URL}/api/sales`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
                 body: JSON.stringify(saleData),
             });
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.error || 'Failed to create sale');
-            }
             setIsFormOpen(false);
             fetchSales();
             fetchProducts();

@@ -1,7 +1,7 @@
 const express = require('express');
 const { supabase, supabaseAdmin } = require('../services/supabase');
-const { requireFormOrJson, requireApiAuth } = require('../middleware/auth');
-const { getDatabase, convertSqljsResult } = require('../db/database');
+const { requireFormOrJson, requireApiAuth, isAdminEmail } = require('../middleware/auth');
+const { getDatabase, convertSqljsResult, queryAll } = require('../db/database');
 const { tenantId } = require('../db/tenant');
 
 const router = express.Router();
@@ -91,6 +91,7 @@ router.post('/login', requireFormOrJson, async (req, res) => {
         success: true,
         token: sessionToken,
         email: data.user.email,
+        isAdmin: isAdminEmail(data.user.email),
         user: { id: userId, email: data.user.email },
       });
     }
@@ -101,34 +102,42 @@ router.post('/login', requireFormOrJson, async (req, res) => {
   }
 });
 
+router.get('/me', requireApiAuth, (req, res) => {
+  res.json({
+    id: req.user.id,
+    email: req.user.email,
+    isAdmin: isAdminEmail(req.user.email),
+  });
+});
+
 router.get('/dashboard-stats', requireApiAuth, (req, res) => {
   try {
     const uid = tenantId(req);
     const db = getDatabase();
     const today = new Date().toISOString().split('T')[0];
 
-    const todaySales = convertSqljsResult(db.exec(
+    const todaySales = queryAll(
       `SELECT COUNT(*) as count, COALESCE(SUM(final_amount), 0) as revenue FROM sales WHERE user_id = ? AND date(sale_date) = ?`,
       [uid, today]
-    ))[0] || { count: 0, revenue: 0 };
+    )[0] || { count: 0, revenue: 0 };
 
-    const stock = convertSqljsResult(db.exec(
+    const stock = queryAll(
       `SELECT COUNT(*) as uniqueProducts, COALESCE(SUM(quantity), 0) as totalStock FROM products WHERE user_id = ?`,
       [uid]
-    ))[0] || { uniqueProducts: 0, totalStock: 0 };
+    )[0] || { uniqueProducts: 0, totalStock: 0 };
 
-    const products = convertSqljsResult(db.exec(
+    const products = queryAll(
       'SELECT name, sku, quantity, stock_alert_threshold FROM products WHERE user_id = ?',
       [uid]
-    ));
+    );
     const lowStockItems = products.filter(
       (p) => p.quantity <= (p.stock_alert_threshold || 1)
     );
 
-    const recentSales = convertSqljsResult(db.exec(
+    const recentSales = queryAll(
       `SELECT bill_number, sale_date, final_amount FROM sales WHERE user_id = ? ORDER BY sale_date DESC LIMIT 7`,
       [uid]
-    ));
+    );
 
     res.json({
       todayRevenue: todaySales.revenue,

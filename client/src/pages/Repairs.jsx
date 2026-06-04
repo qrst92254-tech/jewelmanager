@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Wrench, X, CheckCircle, Printer, Clock, Share2 } from 'lucide-react';
+import { authFetch } from '../utils/authFetch';
 
 const API_URL = '';
 
@@ -90,25 +91,20 @@ const Repairs = () => {
     const handleCreateRepair = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/repairs`, {
+            await authFetch(`${API_URL}/api/repairs`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
-                body: JSON.stringify(repairForm)
+                body: JSON.stringify(repairForm),
             });
-            if (res.ok) {
-                setIsRepairModalOpen(false);
-                setRepairForm({
-                    customer_name: '', customer_phone: '', item_description: '', item_type: 'ornament', metal: 'gold', purity: '22K', weight: 0,
-                    repair_type: 'resizing', problem_description: '', estimated_charges: 0, advance_paid: 0,
-                    received_date: new Date().toISOString().split('T')[0], promised_date: '', assigned_to_karigar_id: '', notes: ''
-                });
-                await Promise.all([fetchRepairs(), fetchCounts()]);
-            }
-        } catch (e) { console.error(e); }
+            setIsRepairModalOpen(false);
+            setRepairForm({
+                customer_name: '', customer_phone: '', item_description: '', item_type: 'ornament', metal: 'gold', purity: '22K', weight: 0,
+                repair_type: 'resizing', problem_description: '', estimated_charges: 0, advance_paid: 0,
+                received_date: new Date().toISOString().split('T')[0], promised_date: '', assigned_to_karigar_id: '', notes: ''
+            });
+            await Promise.all([fetchRepairs(), fetchCounts()]);
+        } catch (err) {
+            alert(err.message || 'Failed to create repair order');
+        }
     };
 
     const handleResolveRepair = async (e) => {

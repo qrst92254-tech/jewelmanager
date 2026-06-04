@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Calendar, DollarSign, Wallet, ArrowDownRight, ArrowUpRight, X, Trash2 } from 'lucide-react';
+import { authFetch } from '../utils/authFetch';
 
 const API_URL = '';
 
@@ -25,22 +26,19 @@ const Accounting = () => {
     const fetchLedger = async () => {
         try {
             const url = ledgerSearch ? `${API_URL}/api/accounting/ledger?account=${encodeURIComponent(ledgerSearch)}` : `${API_URL}/api/accounting/ledger`;
-            const res = await fetch(url);
-            if (res.ok) setLedger(await res.json());
+            setLedger(await authFetch(url));
         } catch (e) { console.error(e); }
     };
 
     const fetchExpenses = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/accounting/expenses`);
-            if (res.ok) setExpenses(await res.json());
+            setExpenses(await authFetch(`${API_URL}/api/accounting/expenses`));
         } catch (e) { console.error(e); }
     };
 
     const fetchCashbook = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/accounting/cashbook?date=${cashbookDate}`);
-            if (res.ok) setCashbook(await res.json());
+            setCashbook(await authFetch(`${API_URL}/api/accounting/cashbook?date=${cashbookDate}`));
         } catch (e) { console.error(e); }
     };
 
@@ -58,25 +56,26 @@ const Accounting = () => {
     const handleCreateExpense = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`${API_URL}/api/accounting/expenses`, {
+            await authFetch(`${API_URL}/api/accounting/expenses`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(expenseForm)
+                body: JSON.stringify(expenseForm),
             });
-            if (res.ok) {
-                setIsExpenseModalOpen(false);
-                setExpenseForm({ expense_date: new Date().toISOString().split('T')[0], category: 'rent', description: '', amount: 0, payment_method: 'cash', paid_to: '', notes: '' });
-                await fetchExpenses();
-            }
-        } catch (e) { console.error(e); }
+            setIsExpenseModalOpen(false);
+            setExpenseForm({ expense_date: new Date().toISOString().split('T')[0], category: 'rent', description: '', amount: 0, payment_method: 'cash', paid_to: '', notes: '' });
+            await fetchExpenses();
+        } catch (err) {
+            alert(err.message || 'Failed to save expense');
+        }
     };
 
     const handleDeleteExpense = async (id) => {
         if (window.confirm('Delete this expense? This will also remove the transaction entry.')) {
             try {
-                const res = await fetch(`${API_URL}/api/accounting/expenses/${id}`, { method: 'DELETE' });
-                if (res.ok) await fetchExpenses();
-            } catch (e) { console.error(e); }
+                await authFetch(`${API_URL}/api/accounting/expenses/${id}`, { method: 'DELETE' });
+                await fetchExpenses();
+            } catch (err) {
+                alert(err.message || 'Failed to delete expense');
+            }
         }
     };
 

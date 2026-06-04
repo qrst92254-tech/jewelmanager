@@ -1,19 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const { getDatabase, saveDatabase, convertSqljsResult } = require('../db/database');
+const { getDatabase, saveDatabase, convertSqljsResult, queryAll, queryOne, lastInsertRowId } = require('../db/database');
 const { tenantId } = require('../db/tenant');
 
 router.get('/', (req, res) => {
     const uid = tenantId(req);
-    const db = getDatabase();
     try {
-        const salesRes = db.exec(`
+        const sales = queryAll(`
             SELECT s.id, s.bill_number, s.customer_name, s.sale_date, s.final_amount
             FROM sales s
             WHERE s.user_id = ?
             ORDER BY s.sale_date DESC
         `, [uid]);
-        const sales = convertSqljsResult(salesRes);
         res.json(sales);
     } catch (error) {
         console.error('Failed to fetch sales:', error);
@@ -23,23 +21,20 @@ router.get('/', (req, res) => {
 
 router.get('/:id', (req, res) => {
     const uid = tenantId(req);
-    const db = getDatabase();
     const { id } = req.params;
     try {
-        const saleRes = db.exec('SELECT * FROM sales WHERE id = ? AND user_id = ?', [id, uid]);
-        const sale = convertSqljsResult(saleRes)[0];
-
+        const sale = queryOne('SELECT * FROM sales WHERE id = ? AND user_id = ?', [id, uid]);
         if (!sale) {
             return res.status(404).json({ error: 'Sale not found.' });
         }
 
-        const itemsRes = db.exec(`
+        const items = queryAll(`
             SELECT si.quantity, si.price_at_sale, p.name, p.sku, p.metal, p.purity
             FROM sale_items si
             JOIN products p ON si.product_id = p.id AND p.user_id = ?
             WHERE si.sale_id = ?
         `, [uid, id]);
-        sale.items = convertSqljsResult(itemsRes);
+        sale.items = items;
 
         res.json(sale);
     } catch (error) {
@@ -77,29 +72,29 @@ router.post('/', (req, res) => {
 
         const date = new Date();
         const prefix = `INV-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}-`;
-        const lastSale = db.exec('SELECT id FROM sales WHERE user_id = ? ORDER BY id DESC LIMIT 1', [uid]);
-        const nextId = lastSale.length > 0 ? convertSqljsResult(lastSale)[0].id + 1 : 1;
+        const lastSale = queryOne('SELECT id FROM sales WHERE user_id = ? ORDER BY id DESC LIMIT 1', [uid]);
+        const nextId = lastSale ? lastSale.id + 1 : 1;
         const bill_number = prefix + nextId.toString().padStart(4, '0');
 
         const saleStmt = db.prepare(`
             INSERT INTO sales (user_id, bill_number, customer_name, customer_phone, total_amount, discount, cgst_rate, sgst_rate, cgst_amount, sgst_amount, final_amount, payment_mode, notes)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            RETURNING id;
         `);
-        const saleResult = saleStmt.get([uid, bill_number, customer_name, customer_phone, total_amount, discount || 0, cgst_rate, sgst_rate, cgst_amount, sgst_amount, final_amount, payment_mode, notes]);
-        const sale_id = saleResult[0];
+        saleStmt.run([uid, bill_number, customer_name, customer_phone, total_amount, discount || 0, cgst_rate, sgst_rate, cgst_amount, sgst_amount, final_amount, payment_mode, notes]);
         saleStmt.free();
+        const sale_id = lastInsertRowId();
 
-        const itemStmt = db.prepare('INSERT INTO sale_items (sale_id, product_id, quantity, price_at_sale) VALUES (?, ?, ?, ?);');
-        const stockStmt = db.prepare('UPDATE products SET quantity = quantity - ? WHERE id = ? AND user_id = ?;');
+        const itemStmt = db.prepare('INSERT INTO sale_items (sale_id, product_id, quantity, price_at_sale) VALUES (?, ?, ?, ?)');
+        const stockStmt = db.prepare('UPDATE products SET quantity = quantity - ? WHERE id = ? AND user_id = ?');
 
         for (const item of items) {
-            const owned = db.exec('SELECT id FROM products WHERE id = ? AND user_id = ?', [item.product_id, uid]);
-            if (!owned.length || !owned[0].values.length) {
-                throw new Error(`Product ${item.product_id} not found for this account`);
+            const productId = parseInt(item.product_id, 10);
+            const owned = queryOne('SELECT id FROM products WHERE id = ? AND user_id = ?', [productId, uid]);
+            if (!owned) {
+                throw new Error(`Product ${productId} not found for this account`);
             }
-            itemStmt.run([sale_id, item.product_id, item.quantity, item.price_at_sale]);
-            stockStmt.run([item.quantity, item.product_id, uid]);
+            itemStmt.run([sale_id, productId, item.quantity, item.price_at_sale]);
+            stockStmt.run([item.quantity, productId, uid]);
         }
 
         itemStmt.free();
@@ -111,7 +106,7 @@ router.post('/', (req, res) => {
         res.status(201).json({ success: true, sale_id, bill_number });
     } catch (error) {
         console.error('Failed to create sale:', error);
-        db.exec('ROLLBACK;');
+        try { db.exec('ROLLBACK;'); } catch { /* ignore */ }
         res.status(500).json({ error: error.message || 'Database transaction failed. Sale not created.' });
     }
 });
@@ -122,10 +117,11 @@ router.delete('/:id', (req, res) => {
     const { id } = req.params;
     try {
         const stmt = db.prepare('DELETE FROM sales WHERE id = ? AND user_id = ?');
-        const result = stmt.run([id, uid]);
+        stmt.run([id, uid]);
+        const changes = db.getRowsModified();
         stmt.free();
 
-        if (result.changes > 0) {
+        if (changes > 0) {
             saveDatabase();
             res.status(200).json({ success: true, message: 'Sale deleted successfully.' });
         } else {

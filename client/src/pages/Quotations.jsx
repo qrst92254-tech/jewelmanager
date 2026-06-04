@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import useStore from '../store/useStore';
 import { Plus, Trash2, Printer, Search, FileText, X, CheckCircle, RefreshCcw } from 'lucide-react';
+import { authFetch } from '../utils/authFetch';
 
 const API_URL = '';
 
@@ -138,24 +139,19 @@ const Quotations = () => {
         };
 
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/quotations`, {
+            await authFetch(`${API_URL}/api/quotations`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
             });
-            if (res.ok) {
-                setIsBuildModalOpen(false);
-                setCustomerName('');
-                setCustomerPhone('');
-                setNotes('');
-                setItems([{ product_name: 'Gold Chain', category: 'chain', purity: '22K', net_weight: 10, rate_per_gram: livePrices.prices.gold_22k_per_gram || 6450, making_charges: 1500, stone_charges: 0, quantity: 1 }]);
-                await fetchQuotations();
-            }
-        } catch (e) { console.error(e); }
+            setIsBuildModalOpen(false);
+            setCustomerName('');
+            setCustomerPhone('');
+            setNotes('');
+            setItems([{ product_name: 'Gold Chain', category: 'chain', purity: '22K', net_weight: 10, rate_per_gram: livePrices.prices.gold_22k_per_gram || 6450, making_charges: 1500, stone_charges: 0, quantity: 1 }]);
+            await fetchQuotations();
+        } catch (err) {
+            alert(err.message || 'Failed to save quotation');
+        }
     };
 
     const handleConvertQuotationToSale = async () => {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Scale, ShieldAlert, Award, FileText, X, CheckCircle, TrendingUp, AlertTriangle, Share2 } from 'lucide-react';
+import { authFetch } from '../utils/authFetch';
 
 const API_URL = '';
 
@@ -103,26 +104,21 @@ const Girvi = () => {
     const handleCreateLoan = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/girvi`, {
+            await authFetch(`${API_URL}/api/girvi`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
-                body: JSON.stringify(loanForm)
+                body: JSON.stringify(loanForm),
             });
-            if (res.ok) {
-                setIsLoanModalOpen(false);
-                setLoanForm({
-                    customer_name: '', customer_phone: '', customer_address: '', customer_id_proof: '',
-                    item_description: '', item_type: 'ornament', metal: 'gold', purity: '22K', gross_weight: 0, net_weight: 0, stone_weight: 0,
-                    valuation_rate: 6000, metal_value: 0, loan_amount: 0, interest_rate: 2.0, interest_type: 'simple',
-                    pledge_date: new Date().toISOString().split('T')[0], due_date: '', notes: ''
-                });
-                await Promise.all([fetchLoans(), fetchOverdueSummary()]);
-            }
-        } catch (e) { console.error(e); }
+            setIsLoanModalOpen(false);
+            setLoanForm({
+                customer_name: '', customer_phone: '', customer_address: '', customer_id_proof: '',
+                item_description: '', item_type: 'ornament', metal: 'gold', purity: '22K', gross_weight: 0, net_weight: 0, stone_weight: 0,
+                valuation_rate: 6000, metal_value: 0, loan_amount: 0, interest_rate: 2.0, interest_type: 'simple',
+                pledge_date: new Date().toISOString().split('T')[0], due_date: '', notes: ''
+            });
+            await Promise.all([fetchLoans(), fetchOverdueSummary()]);
+        } catch (err) {
+            alert(err.message || 'Failed to create loan');
+        }
     };
 
     const handleAddPayment = async (e) => {

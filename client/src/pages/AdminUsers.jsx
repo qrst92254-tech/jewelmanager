@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-
-const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || import.meta.env.VITE_CREATOR_EMAIL || '';
+import useStore from '../store/useStore';
+import { authFetch } from '../utils/authFetch';
 
 export default function AdminUsers() {
+  const isAdmin = useStore((state) => state.auth.isAdmin);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
@@ -17,15 +18,10 @@ export default function AdminUsers() {
 
   const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem('jewel_token');
-      const res = await fetch('/api/admin/users', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) setUsers(data.users);
-      else setError(data.message);
-    } catch {
-      setError('Failed to load users');
+      const data = await authFetch('/api/admin/users');
+      setUsers(data.users);
+    } catch (err) {
+      setError(err.message || 'Failed to load users');
     } finally {
       setLoading(false);
     }
@@ -35,13 +31,8 @@ export default function AdminUsers() {
     setError('');
     setMessage('');
     try {
-      const token = localStorage.getItem('jewel_token');
-      const res = await fetch('/api/admin/create-user', {
+      await authFetch('/api/admin/create-user', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           fullName: form.fullName,
           email: form.email,
@@ -51,41 +42,26 @@ export default function AdminUsers() {
           city: form.city,
         }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        setMessage(`User ${form.email} created successfully!`);
-        setForm({ fullName: '', email: '', password: '', shopName: '', phone: '', city: '' });
-        fetchUsers();
-      } else {
-        setError(data.message);
-      }
-    } catch {
-      setError('Failed to create user');
+      setMessage(`User ${form.email} created successfully!`);
+      setForm({ fullName: '', email: '', password: '', shopName: '', phone: '', city: '' });
+      fetchUsers();
+    } catch (err) {
+      setError(err.message || 'Failed to create user');
     }
   };
 
   const deleteUser = async (userId, userEmail) => {
     if (!window.confirm(`Delete user ${userEmail}? This cannot be undone.`)) return;
     try {
-      const token = localStorage.getItem('jewel_token');
-      const res = await fetch(`/api/admin/users/${userId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setMessage('User deleted successfully');
-        fetchUsers();
-      } else {
-        setError(data.message);
-      }
-    } catch {
-      setError('Failed to delete user');
+      await authFetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+      setMessage('User deleted successfully');
+      fetchUsers();
+    } catch (err) {
+      setError(err.message || 'Failed to delete user');
     }
   };
 
-  const currentUser = localStorage.getItem('jewel_user');
-  if (adminEmail && currentUser !== adminEmail) {
+  if (!isAdmin) {
     return (
       <div style={{ padding: '2rem' }}>
         <h1>Access denied</h1>

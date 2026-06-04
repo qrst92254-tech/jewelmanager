@@ -70,6 +70,17 @@ router.put('/:id', (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+router.delete('/:id', (req, res) => {
+  const uid = tenantId(req);
+  const db = getDatabase();
+  try {
+    db.run('UPDATE karigars SET is_active = 0 WHERE id = ? AND user_id = ?', [req.params.id, uid]);
+    if (db.getRowsModified() === 0) return res.status(404).json({ error: 'Not found' });
+    saveDatabase();
+    res.json({ message: 'Karigar removed' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 router.get('/:id/transactions', (req, res) => {
   const uid = tenantId(req);
   const db = getDatabase();

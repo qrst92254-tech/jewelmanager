@@ -67,7 +67,7 @@ router.post('/expenses', (req, res) => {
     db.run('INSERT INTO expenses (user_id, expense_date, category, description, amount, payment_method, paid_to, notes) VALUES (?,?,?,?,?,?,?,?)',
       [uid, expense_date, category, description || null, amount, payment_method || 'cash', paid_to || null, notes || null]);
     db.run(`INSERT INTO ledger_entries (user_id, entry_date, entry_type, account_name, description, debit, credit, balance)
-      VALUES (?,?,?,?,?,0,0)`,
+      VALUES (?,?,?,?,?,?,0,0)`,
       [uid, expense_date, 'expense', category, description || category, amount]);
     const id = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
     saveDatabase();

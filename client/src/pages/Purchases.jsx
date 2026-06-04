@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Truck, ArrowUpRight, Scale, X, CheckCircle, PlusCircle, Trash2 } from 'lucide-react';
+import { authFetch } from '../utils/authFetch';
 
 const API_URL = '';
 
@@ -81,21 +82,16 @@ const Purchases = () => {
     const handleCreateSupplier = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/purchases/suppliers`, {
+            await authFetch(`${API_URL}/api/purchases/suppliers`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
-                body: JSON.stringify(supplierForm)
+                body: JSON.stringify(supplierForm),
             });
-            if (res.ok) {
-                setIsSupplierModalOpen(false);
-                setSupplierForm({ name: '', contact_person: '', phone: '', email: '', address: '', gstin: '', supplier_type: 'wholesaler' });
-                await fetchSuppliers();
-            }
-        } catch (e) { console.error(e); }
+            setIsSupplierModalOpen(false);
+            setSupplierForm({ name: '', contact_person: '', phone: '', email: '', address: '', gstin: '', supplier_type: 'wholesaler' });
+            await fetchSuppliers();
+        } catch (err) {
+            alert(err.message || 'Failed to add supplier');
+        }
     };
 
     const handleAddItem = () => {
@@ -145,22 +141,17 @@ const Purchases = () => {
         };
 
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/purchases/orders`, {
+            await authFetch(`${API_URL}/api/purchases/orders`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
             });
-            if (res.ok) {
-                setIsOrderModalOpen(false);
-                setItems([{ product_name: 'Raw Gold Bar 999', category: 'bullion', metal: 'gold', purity: '24K', gross_weight: 100, net_weight: 100, quantity: 1, rate_per_gram: 7200, making_charges: 0 }]);
-                setOrderForm({ supplier_id: suppliers[0]?.id || '', order_date: new Date().toISOString().split('T')[0], expected_date: '', amount_paid: 0, payment_method: 'cash', notes: '' });
-                await Promise.all([fetchOrders(), fetchSuppliers()]);
-            }
-        } catch (e) { console.error(e); }
+            setIsOrderModalOpen(false);
+            setItems([{ product_name: 'Raw Gold Bar 999', category: 'bullion', metal: 'gold', purity: '24K', gross_weight: 100, net_weight: 100, quantity: 1, rate_per_gram: 7200, making_charges: 0 }]);
+            setOrderForm({ supplier_id: suppliers[0]?.id || '', order_date: new Date().toISOString().split('T')[0], expected_date: '', amount_paid: 0, payment_method: 'cash', notes: '' });
+            await Promise.all([fetchOrders(), fetchSuppliers()]);
+        } catch (err) {
+            alert(err.message || 'Failed to record purchase');
+        }
     };
 
     const totalOutstandingVal = suppliers.reduce((acc, s) => acc + (s.outstanding_amount || 0), 0);

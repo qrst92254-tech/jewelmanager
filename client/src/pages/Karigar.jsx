@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, User, Hammer, ShieldAlert, Award, FileText, ArrowUpRight, ArrowDownLeft, X, CheckCircle } from 'lucide-react';
+import { Plus, User, Hammer, ShieldAlert, Award, FileText, ArrowUpRight, ArrowDownLeft, X, CheckCircle, Trash2 } from 'lucide-react';
+import { authFetch } from '../utils/authFetch';
 
 const API_URL = '';
 
@@ -76,21 +77,28 @@ const Karigar = () => {
     const handleCreateKarigar = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/karigar`, {
+            await authFetch(`${API_URL}/api/karigar`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
-                body: JSON.stringify(karigarForm)
+                body: JSON.stringify(karigarForm),
             });
-            if (res.ok) {
-                setIsKarigarModalOpen(false);
-                setKarigarForm({ name: '', phone: '', address: '', skill_type: '', id_proof: '' });
-                await fetchKarigars();
-            }
-        } catch (e) { console.error(e); }
+            setIsKarigarModalOpen(false);
+            setKarigarForm({ name: '', phone: '', address: '', skill_type: '', id_proof: '' });
+            await fetchKarigars();
+        } catch (err) {
+            alert(err.message || 'Failed to add karigar');
+        }
+    };
+
+    const handleDeleteKarigar = async (karigar) => {
+        if (!window.confirm(`Remove karigar ${karigar.name}?`)) return;
+        try {
+            await authFetch(`${API_URL}/api/karigar/${karigar.id}`, { method: 'DELETE' });
+            if (selectedKarigar?.id === karigar.id) setSelectedKarigar(null);
+            await fetchKarigars();
+            await fetchJobCards();
+        } catch (err) {
+            alert(err.message || 'Failed to delete karigar');
+        }
     };
 
     const handleCreateTx = async (e) => {
@@ -120,23 +128,26 @@ const Karigar = () => {
 
     const handleCreateJob = async (e) => {
         e.preventDefault();
+        if (!selectedKarigar) {
+            alert('Select a karigar first, then create a job card.');
+            return;
+        }
+        if (!jobForm.product_description?.trim()) {
+            alert('Enter a product description for the job.');
+            return;
+        }
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/karigar/job-cards`, {
+            await authFetch(`${API_URL}/api/karigar/job-cards`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
-                body: JSON.stringify({ ...jobForm, karigar_id: selectedKarigar.id })
+                body: JSON.stringify({ ...jobForm, karigar_id: selectedKarigar.id }),
             });
-            if (res.ok) {
-                setIsJobModalOpen(false);
-                setJobForm({ product_description: '', category: 'chain', purity: '22K', gold_issued_grams: 0, making_charges: 0, order_date: new Date().toISOString().split('T')[0], expected_date: '', notes: '' });
-                await fetchJobCards();
-                if (selectedKarigar) loadKarigarDetails(selectedKarigar);
-            }
-        } catch (e) { console.error(e); }
+            setIsJobModalOpen(false);
+            setJobForm({ product_description: '', category: 'chain', purity: '22K', gold_issued_grams: 0, making_charges: 0, order_date: new Date().toISOString().split('T')[0], expected_date: '', notes: '' });
+            await fetchJobCards();
+            loadKarigarDetails(selectedKarigar);
+        } catch (err) {
+            alert(err.message || 'Failed to create job card');
+        }
     };
 
     const handleResolveJob = async (e) => {
@@ -223,6 +234,7 @@ const Karigar = () => {
                                         <th style={{ textAlign: 'right' }}>Issued Gold Bal</th>
                                         <th style={{ textAlign: 'right' }}>Issued Silver Bal</th>
                                         <th style={{ textAlign: 'center' }}>Completed Jobs</th>
+                                        <th style={{ textAlign: 'center' }}>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -234,6 +246,11 @@ const Karigar = () => {
                                             <td style={{ textAlign: 'right', fontWeight: 600, color: k.balance_gold_grams > 0 ? '#FF5252' : 'inherit' }}>{k.balance_gold_grams || 0} g</td>
                                             <td style={{ textAlign: 'right', fontWeight: 600, color: k.balance_silver_grams > 0 ? '#FF5252' : 'inherit' }}>{k.balance_silver_grams || 0} g</td>
                                             <td style={{ textAlign: 'center' }}>{k.total_orders_completed || 0} jobs</td>
+                                            <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                                <button type="button" onClick={() => handleDeleteKarigar(k)} title="Remove karigar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}>
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getDatabase, saveDatabase } = require('../db/database');
+const { getDatabase, saveDatabase, queryAll } = require('../db/database');
 const { tenantId } = require('../db/tenant');
 
 const convertSqljsResult = (res) => {
@@ -21,9 +21,7 @@ router.get('/', (req, res) => {
     try {
         const uid = tenantId(req);
         const db = getDatabase();
-        const result = db.exec('SELECT * FROM products WHERE user_id = ? ORDER BY created_at DESC', [uid]);
-        const products = convertSqljsResult(result);
-        res.json(products);
+        res.json(queryAll('SELECT * FROM products WHERE user_id = ? ORDER BY created_at DESC', [uid]));
     } catch (error) {
         console.error('Error fetching products:', error.message);
         res.status(500).json({ error: 'Failed to retrieve products' });

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Calendar, Award, Gift, FileText, X, CheckCircle, CreditCard, ChevronRight } from 'lucide-react';
+import { authFetch } from '../utils/authFetch';
 
 const API_URL = '';
 
@@ -96,41 +97,31 @@ const Schemes = () => {
     const handleCreatePlan = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/schemes/plans`, {
+            await authFetch(`${API_URL}/api/schemes/plans`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
-                body: JSON.stringify(planForm)
+                body: JSON.stringify(planForm),
             });
-            if (res.ok) {
-                setIsPlanModalOpen(false);
-                setPlanForm({ plan_name: '', duration_months: 11, monthly_amount: 5000, bonus_month: 1, scheme_type: 'gold', description: '' });
-                await fetchPlans();
-            }
-        } catch (e) { console.error(e); }
+            setIsPlanModalOpen(false);
+            setPlanForm({ plan_name: '', duration_months: 11, monthly_amount: 5000, bonus_month: 1, scheme_type: 'gold', description: '' });
+            await fetchPlans();
+        } catch (err) {
+            alert(err.message || 'Failed to create scheme plan');
+        }
     };
 
     const handleCreateEnrollment = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/schemes/enrollments`, {
+            await authFetch(`${API_URL}/api/schemes/enrollments`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
-                body: JSON.stringify(enrollForm)
+                body: JSON.stringify(enrollForm),
             });
-            if (res.ok) {
-                setIsEnrollModalOpen(false);
-                setEnrollForm({ plan_id: plans[0]?.id || '', customer_name: '', customer_phone: '', start_date: new Date().toISOString().split('T')[0], monthly_amount: 5000, notes: '' });
-                await fetchEnrollments();
-            }
-        } catch (e) { console.error(e); }
+            setIsEnrollModalOpen(false);
+            setEnrollForm({ plan_id: plans[0]?.id || '', customer_name: '', customer_phone: '', start_date: new Date().toISOString().split('T')[0], monthly_amount: 5000, notes: '' });
+            await fetchEnrollments();
+        } catch (err) {
+            alert(err.message || 'Failed to create enrollment');
+        }
     };
 
     const handleRecordPayment = async (e) => {

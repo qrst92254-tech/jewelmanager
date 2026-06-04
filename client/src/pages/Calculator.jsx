@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLivePrices } from '../hooks/useLivePrices';
+import { authFetch } from '../utils/authFetch';
 
 const Calculator = () => {
+    const navigate = useNavigate();
     const { prices } = useLivePrices();
     
     const [metal, setMetal] = useState('Gold');
@@ -18,6 +21,75 @@ const Calculator = () => {
     const [otherCharges, setOtherCharges] = useState('');
 
     const [breakdown, setBreakdown] = useState(null);
+    const [saving, setSaving] = useState(false);
+
+    const buildQuotePayload = () => {
+        const rate = getCurrentRate();
+        const wt = parseFloat(netWeight) || 0;
+        const metalValue = wt * rate;
+        let making = 0;
+        const mVal = parseFloat(makingValue) || 0;
+        if (makingType === 'per_gram') making = wt * mVal;
+        else if (makingType === 'percent') making = metalValue * (mVal / 100);
+        else making = mVal;
+        const wastage = metalValue * ((parseFloat(wastagePercent) || 0) / 100);
+        const stone = parseFloat(stoneCharges) || 0;
+        const other = parseFloat(otherCharges) || 0;
+        const subtotal = metalValue + making + wastage + stone + other;
+        const gst = subtotal * 0.03;
+        return {
+            customer_name: 'Walk-in Customer',
+            customer_phone: '',
+            gold_rate_used: metal === 'Gold' ? rate : prices.gold_22k_per_gram,
+            silver_rate_used: metal === 'Silver' ? rate : prices.silver_999_per_gram,
+            valid_until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            subtotal: Math.round(subtotal),
+            gst_amount: Math.round(gst),
+            grand_total: Math.round(subtotal + gst),
+            notes: `Calculator: ${metal} ${purity}, ${wt}g net`,
+            items: [{
+                product_name: `${metal} ${purity} Item`,
+                category: 'calculator',
+                purity,
+                net_weight: wt,
+                rate_per_gram: rate,
+                metal_value: Math.round(metalValue),
+                making_charges: Math.round(making),
+                stone_charges: Math.round(stone),
+                gst_amount: Math.round(gst),
+                item_total: Math.round(subtotal + gst),
+                quantity: 1,
+            }],
+        };
+    };
+
+    const handleSaveQuote = async () => {
+        if (!breakdown) {
+            alert('Enter weight and rate to calculate a price first.');
+            return;
+        }
+        setSaving(true);
+        try {
+            await authFetch('/api/quotations', {
+                method: 'POST',
+                body: JSON.stringify(buildQuotePayload()),
+            });
+            alert('Quotation saved successfully.');
+            navigate('/quotations');
+        } catch (err) {
+            alert(err.message || 'Failed to save quotation');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleCreateBill = () => {
+        if (!breakdown) {
+            alert('Enter weight and rate to calculate a price first.');
+            return;
+        }
+        navigate('/sales');
+    };
 
     // Get current rate
     const getCurrentRate = () => {
@@ -236,8 +308,10 @@ const Calculator = () => {
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-                                    <button className="btn-primary" style={{ flex: 1 }}>Create Bill</button>
-                                    <button className="btn-secondary" style={{ flex: 1 }}>Save Quote</button>
+                                    <button type="button" className="btn-primary" style={{ flex: 1 }} onClick={handleCreateBill}>Create Bill</button>
+                                    <button type="button" className="btn-secondary" style={{ flex: 1 }} onClick={handleSaveQuote} disabled={saving}>
+                                        {saving ? 'Saving...' : 'Save Quote'}
+                                    </button>
                                 </div>
                             </div>
                         )}
