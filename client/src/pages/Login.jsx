@@ -4,7 +4,7 @@ import useStore from '../store/useStore';
 import { LogIn } from 'lucide-react';
 
 const Login = () => {
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -16,7 +16,7 @@ const Login = () => {
         setError(null);
         setIsLoading(true);
         try {
-            await login(username, password);
+            await login(email, password);
             navigate('/dashboard');
         } catch (err) {
             setError(err.message);
@@ -106,12 +106,14 @@ const Login = () => {
 
                     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                         <div>
-                            <label>Username</label>
+                            <label>Email</label>
                             <input 
-                                type="text" 
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                placeholder="Enter your username"
+                                type="email"
+                                id="email"
+                                name="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="Enter your email address"
                                 required 
                             />
                         </div>
@@ -143,13 +145,7 @@ const Login = () => {
                         </button>
                     </form>
 
-                    <div style={{ marginTop: '2.5rem', textAlign: 'center' }}>
-                        <div style={{ display: 'inline-block', padding: '0.5rem 1rem', background: 'var(--bg)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                Default: <strong style={{ color: 'var(--text-primary)' }}>admin</strong> / <strong style={{ color: 'var(--text-primary)' }}>shopowner123</strong>
-                            </p>
-                        </div>
-                    </div>
+                    {/* Default credentials hint removed */}
                 </div>
             </div>
         </div>

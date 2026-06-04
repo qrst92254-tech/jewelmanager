@@ -67,13 +67,13 @@ const useStore = create(devtools((set, get) => ({
     },
 
     // Auth Actions
-    login: async (username, password) => {
+    login: async (email, password) => {
         // Use relative paths: in dev, Vite proxy handles /api/* → localhost:3001
         const API_URL = '';
         const response = await fetch(`${API_URL}/api/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password }),
+            body: JSON.stringify({ email, password }),
         });
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
@@ -82,8 +82,8 @@ const useStore = create(devtools((set, get) => ({
         const data = await response.json();
         if (data.success) {
             localStorage.setItem('jewel_token', data.token);
-            localStorage.setItem('jewel_user', data.username);
-            set({ auth: { isAuthenticated: true, user: data.username, token: data.token } });
+            localStorage.setItem('jewel_user', data.email);
+            set({ auth: { isAuthenticated: true, user: data.email, token: data.token } });
         } else {
             throw new Error(data.message || 'Login failed');
         }

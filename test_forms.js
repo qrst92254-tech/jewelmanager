@@ -7,7 +7,7 @@ async function testAllForms() {
         const loginRes = await fetch(`${API_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: 'admin', password: 'shopowner123' })
+            body: JSON.stringify({ email: 'admin@jewelmanager.com', password: 'shopowner123' })
         });
         const loginData = await loginRes.json();
         console.log('Login:', loginRes.status, loginData);

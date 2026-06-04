@@ -98,7 +98,17 @@ router.post('/login', requireFormOrJson, async (req, res) => {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
             console.error('Supabase login error:', error);
-            return res.status(401).render('login', { error: error.message });
+            if (error.code === 'email_not_confirmed') {
+              return res.status(400).json({
+                message: 'Your email is not confirmed. Please check your inbox or contact admin.'
+              });
+            }
+            if (error.code === 'invalid_credentials') {
+              return res.status(401).json({
+                message: 'Incorrect email or password. Please try again.'
+              });
+            }
+            return res.status(401).json({ error: error.message });
         }
 
         if (data.session?.access_token) {
