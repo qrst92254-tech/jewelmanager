@@ -23,6 +23,7 @@ import Purchases from './pages/Purchases';
 import Reports from './pages/Reports';
 import Accounting from './pages/Accounting';
 import Settings from './pages/Settings';
+import AdminUsers from './pages/AdminUsers';
 import Login from './pages/Login';
 
 function App() {
@@ -68,6 +69,7 @@ function App() {
                                 <Route path="/reports" element={<Reports />} />
                                 <Route path="/accounting" element={<Accounting />} />
                                 <Route path="/settings" element={<Settings />} />
+                                <Route path="/admin/users" element={<AdminUsers />} />
                             </Route>
 
                             {/* Fallback route */}

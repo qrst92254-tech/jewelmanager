@@ -1,9 +1,8 @@
-// server/routes/customers.js
 const express = require('express');
 const router = express.Router();
 const { getDatabase, saveDatabase } = require('../db/database');
+const { tenantId } = require('../db/tenant');
 
-// Helper to convert sql.js result set to array of objects
 const toObjects = (res) => {
   if (!res || res.length === 0) return [];
   const cols = res[0].columns;
@@ -14,40 +13,39 @@ const toObjects = (res) => {
   });
 };
 
-// GET /api/customers - list with optional search query (by name, phone, or email)
 router.get('/', (req, res) => {
+  const uid = tenantId(req);
   const { q } = req.query;
   const db = getDatabase();
-  let sql = 'SELECT * FROM customers';
-  const params = [];
+  let sql = 'SELECT * FROM customers WHERE user_id = ?';
+  const params = [uid];
   if (q) {
-    sql += " WHERE name LIKE ? OR phone LIKE ? OR email LIKE ?";
+    sql += ' AND (name LIKE ? OR phone LIKE ? OR email LIKE ?)';
     const like = `%${q}%`;
     params.push(like, like, like);
   }
   sql += ' ORDER BY created_at DESC';
   try {
     const result = db.exec(sql, params);
-    const customers = toObjects(result);
-    res.json(customers);
+    res.json(toObjects(result));
   } catch (err) {
     console.error('Error fetching customers:', err.message);
     res.status(500).json({ error: 'Failed to fetch customers' });
   }
 });
 
-// GET /api/customers/:id/purchases - purchase history for customer
 router.get('/:id/purchases', (req, res) => {
+  const uid = tenantId(req);
   const { id } = req.params;
   const db = getDatabase();
 
   try {
-    const customerRes = db.exec('SELECT * FROM customers WHERE id = ?', [id]);
+    const customerRes = db.exec('SELECT * FROM customers WHERE id = ? AND user_id = ?', [id, uid]);
     const customer = toObjects(customerRes)[0];
     if (!customer) return res.status(404).json({ error: 'Customer not found' });
 
-    const params = [];
-    let sql = 'SELECT id, bill_number, sale_date, final_amount, payment_mode FROM sales WHERE 1=1';
+    const params = [uid];
+    let sql = 'SELECT id, bill_number, sale_date, final_amount, payment_mode FROM sales WHERE user_id = ?';
     if (customer.phone) {
       sql += ' AND (customer_phone = ? OR customer_name = ?)';
       params.push(customer.phone, customer.name);
@@ -57,26 +55,27 @@ router.get('/:id/purchases', (req, res) => {
     }
     sql += ' ORDER BY sale_date DESC';
 
-    const salesRes = db.exec(sql, params);
-    const purchases = toObjects(salesRes);
-    res.json(purchases);
+    res.json(toObjects(db.exec(sql, params)));
   } catch (err) {
     console.error('Error fetching customer purchases:', err.message);
     res.status(500).json({ error: 'Failed to fetch customer purchases' });
   }
 });
 
-// GET /api/customers/:id/summary - customer summary and alerts
 router.get('/:id/summary', (req, res) => {
+  const uid = tenantId(req);
   const { id } = req.params;
   const db = getDatabase();
 
   try {
-    const customerRes = db.exec('SELECT * FROM customers WHERE id = ?', [id]);
+    const customerRes = db.exec('SELECT * FROM customers WHERE id = ? AND user_id = ?', [id, uid]);
     const customer = toObjects(customerRes)[0];
     if (!customer) return res.status(404).json({ error: 'Customer not found' });
 
-    const purchasesRes = db.exec('SELECT sum(final_amount) as total_sales, count(*) as purchases_count FROM sales WHERE customer_name = ? OR customer_phone = ?', [customer.name, customer.phone]);
+    const purchasesRes = db.exec(
+      'SELECT sum(final_amount) as total_sales, count(*) as purchases_count FROM sales WHERE user_id = ? AND (customer_name = ? OR customer_phone = ?)',
+      [uid, customer.name, customer.phone]
+    );
     const purchaseSummary = toObjects(purchasesRes)[0] || { total_sales: 0, purchases_count: 0 };
 
     const upcomingBirthday = customer.date_of_birth ? (() => {
@@ -100,7 +99,7 @@ router.get('/:id/summary', (req, res) => {
       total_sales: purchaseSummary.total_sales || 0,
       purchases_count: purchaseSummary.purchases_count || 0,
       upcomingBirthday,
-      upcomingAnniversary
+      upcomingAnniversary,
     });
   } catch (err) {
     console.error('Error fetching customer summary:', err.message);
@@ -108,13 +107,12 @@ router.get('/:id/summary', (req, res) => {
   }
 });
 
-// GET /api/customers/:id - detail
 router.get('/:id', (req, res) => {
+  const uid = tenantId(req);
   const { id } = req.params;
   const db = getDatabase();
-  const sql = 'SELECT * FROM customers WHERE id = ?';
   try {
-    const result = db.exec(sql, [id]);
+    const result = db.exec('SELECT * FROM customers WHERE id = ? AND user_id = ?', [id, uid]);
     const customers = toObjects(result);
     if (customers.length === 0) return res.status(404).json({ error: 'Customer not found' });
     res.json(customers[0]);
@@ -124,48 +122,22 @@ router.get('/:id', (req, res) => {
   }
 });
 
-// POST /api/customers - create new customer
 router.post('/', (req, res) => {
+  const uid = tenantId(req);
   const {
-    name,
-    phone,
-    address,
-    aadhaar_number,
-    pan_number,
-    date_of_birth,
-    anniversary_date,
-    photo_path,
-    customer_type,
-    loyalty_points = 0,
-    credit_limit = 0,
-    outstanding_amount = 0,
-    notes,
-    city,
-    gstin,
-    email
+    name, phone, address, aadhaar_number, pan_number, date_of_birth, anniversary_date,
+    photo_path, customer_type, loyalty_points = 0, credit_limit = 0, outstanding_amount = 0,
+    notes, city, gstin, email,
   } = req.body;
 
   if (!name) return res.status(400).json({ error: 'Name is required' });
 
-  const sql = `INSERT INTO customers (name, phone, address, aadhaar_number, pan_number, date_of_birth, anniversary_date, photo_path, customer_type, loyalty_points, credit_limit, outstanding_amount, notes, city, gstin, email)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
+  const sql = `INSERT INTO customers (user_id, name, phone, address, aadhaar_number, pan_number, date_of_birth, anniversary_date, photo_path, customer_type, loyalty_points, credit_limit, outstanding_amount, notes, city, gstin, email)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
   const params = [
-    name,
-    phone || null,
-    address || null,
-    aadhaar_number || null,
-    pan_number || null,
-    date_of_birth || null,
-    anniversary_date || null,
-    photo_path || null,
-    customer_type || 'retail',
-    loyalty_points,
-    credit_limit,
-    outstanding_amount,
-    notes || null,
-    city || null,
-    gstin || null,
-    email || null
+    uid, name, phone || null, address || null, aadhaar_number || null, pan_number || null,
+    date_of_birth || null, anniversary_date || null, photo_path || null, customer_type || 'retail',
+    loyalty_points, credit_limit, outstanding_amount, notes || null, city || null, gstin || null, email || null,
   ];
   try {
     const db = getDatabase();
@@ -179,68 +151,27 @@ router.post('/', (req, res) => {
   }
 });
 
-// PUT /api/customers/:id - update existing
 router.put('/:id', (req, res) => {
+  const uid = tenantId(req);
   const { id } = req.params;
   const {
-    name,
-    phone,
-    address,
-    aadhaar_number,
-    pan_number,
-    date_of_birth,
-    anniversary_date,
-    photo_path,
-    customer_type,
-    loyalty_points,
-    credit_limit,
-    outstanding_amount,
-    notes,
-    city,
-    gstin,
-    email
+    name, phone, address, aadhaar_number, pan_number, date_of_birth, anniversary_date,
+    photo_path, customer_type, loyalty_points, credit_limit, outstanding_amount, notes, city, gstin, email,
   } = req.body;
 
   const sql = `UPDATE customers SET
-    name = ?,
-    phone = ?,
-    address = ?,
-    aadhaar_number = ?,
-    pan_number = ?,
-    date_of_birth = ?,
-    anniversary_date = ?,
-    photo_path = ?,
-    customer_type = ?,
-    loyalty_points = ?,
-    credit_limit = ?,
-    outstanding_amount = ?,
-    notes = ?,
-    city = ?,
-    gstin = ?,
-    email = ?
-    WHERE id = ?`;
+    name = ?, phone = ?, address = ?, aadhaar_number = ?, pan_number = ?,
+    date_of_birth = ?, anniversary_date = ?, photo_path = ?, customer_type = ?,
+    loyalty_points = ?, credit_limit = ?, outstanding_amount = ?, notes = ?, city = ?, gstin = ?, email = ?
+    WHERE id = ? AND user_id = ?`;
   const params = [
-    name,
-    phone,
-    address,
-    aadhaar_number,
-    pan_number,
-    date_of_birth,
-    anniversary_date,
-    photo_path,
-    customer_type,
-    loyalty_points,
-    credit_limit,
-    outstanding_amount,
-    notes,
-    city,
-    gstin,
-    email,
-    id
+    name, phone, address, aadhaar_number, pan_number, date_of_birth, anniversary_date,
+    photo_path, customer_type, loyalty_points, credit_limit, outstanding_amount, notes, city, gstin, email, id, uid,
   ];
   try {
     const db = getDatabase();
     db.run(sql, params);
+    if (db.getRowsModified() === 0) return res.status(404).json({ error: 'Customer not found' });
     saveDatabase();
     res.json({ message: 'Customer updated' });
   } catch (err) {
@@ -249,19 +180,19 @@ router.put('/:id', (req, res) => {
   }
 });
 
-// DELETE /api/customers/:id - soft delete (set is_active = 0) if column exists, else hard delete
 router.delete('/:id', (req, res) => {
+  const uid = tenantId(req);
   const { id } = req.params;
   const db = getDatabase();
-  // Check if column exists
-  const colCheck = db.exec("PRAGMA table_info(customers)");
+  const colCheck = db.exec('PRAGMA table_info(customers)');
   const cols = colCheck[0].values.map(v => v[1]);
   const hasActive = cols.includes('is_active');
   const sql = hasActive
-    ? 'UPDATE customers SET is_active = 0 WHERE id = ?'
-    : 'DELETE FROM customers WHERE id = ?';
+    ? 'UPDATE customers SET is_active = 0 WHERE id = ? AND user_id = ?'
+    : 'DELETE FROM customers WHERE id = ? AND user_id = ?';
   try {
-    db.run(sql, [id]);
+    db.run(sql, [id, uid]);
+    if (db.getRowsModified() === 0) return res.status(404).json({ error: 'Customer not found' });
     saveDatabase();
     res.json({ message: hasActive ? 'Customer deactivated' : 'Customer deleted' });
   } catch (err) {
@@ -270,17 +201,18 @@ router.delete('/:id', (req, res) => {
   }
 });
 
-// PATCH /api/customers/:id/loyalty - add/subtract loyalty points
 router.patch('/:id/loyalty', (req, res) => {
+  const uid = tenantId(req);
   const { id } = req.params;
-  const { delta } = req.body; // delta can be positive or negative
+  const { delta } = req.body;
   if (typeof delta !== 'number') return res.status(400).json({ error: 'delta must be a number' });
   const db = getDatabase();
   try {
-    const curRes = db.exec('SELECT loyalty_points FROM customers WHERE id = ?', [id]);
-    const cur = curRes[0]?.values[0][0] ?? 0;
+    const curRes = db.exec('SELECT loyalty_points FROM customers WHERE id = ? AND user_id = ?', [id, uid]);
+    if (!curRes[0]?.values.length) return res.status(404).json({ error: 'Customer not found' });
+    const cur = curRes[0].values[0][0] ?? 0;
     const newPoints = cur + delta;
-    db.run('UPDATE customers SET loyalty_points = ? WHERE id = ?', [newPoints, id]);
+    db.run('UPDATE customers SET loyalty_points = ? WHERE id = ? AND user_id = ?', [newPoints, id, uid]);
     saveDatabase();
     res.json({ loyalty_points: newPoints });
   } catch (err) {

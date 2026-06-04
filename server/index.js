@@ -25,6 +25,8 @@ const accountingRoutes = require('./routes/accounting');
 const settingsRoutes = require('./routes/settings');
 const pricingRoutes = require('./routes/pricing');
 const creatorRoutes = require('./routes/creator');
+const adminRoutes = require('./routes/admin');
+const { requireApiAuth } = require('./middleware/auth');
 const { checkSubscription } = require('./middleware/subscription');
 
 // Middleware
@@ -61,20 +63,21 @@ app.use((err, req, res, next) => {
 });
 
 // API Routes
-app.use('/api/prices', priceRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/sales', salesRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/customers', customersRoutes);
-app.use('/api/karigar', karigarRoutes);
-app.use('/api/girvi', girviRoutes);
-app.use('/api/schemes', schemesRoutes);
-app.use('/api/repairs', repairsRoutes);
-app.use('/api/quotations', quotationsRoutes);
-app.use('/api/purchases', purchasesRoutes);
-app.use('/api/reports', reportsRoutes);
-app.use('/api/accounting', accountingRoutes);
-app.use('/api/settings', settingsRoutes);
+app.use('/api/prices', priceRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/products', requireApiAuth, productRoutes);
+app.use('/api/sales', requireApiAuth, salesRoutes);
+app.use('/api/customers', requireApiAuth, customersRoutes);
+app.use('/api/karigar', requireApiAuth, karigarRoutes);
+app.use('/api/girvi', requireApiAuth, girviRoutes);
+app.use('/api/schemes', requireApiAuth, schemesRoutes);
+app.use('/api/repairs', requireApiAuth, repairsRoutes);
+app.use('/api/quotations', requireApiAuth, quotationsRoutes);
+app.use('/api/purchases', requireApiAuth, purchasesRoutes);
+app.use('/api/reports', requireApiAuth, reportsRoutes);
+app.use('/api/accounting', requireApiAuth, accountingRoutes);
+app.use('/api/settings', requireApiAuth, settingsRoutes);
 // Mount new routes for pricing, subscriptions, and creator admin
 app.use('/', pricingRoutes);
 app.use('/', creatorRoutes);

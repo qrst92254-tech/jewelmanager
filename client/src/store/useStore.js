@@ -87,7 +87,21 @@ const useStore = create(devtools((set, get) => ({
         }
     },
 
-    logout: () => {
+    logout: async () => {
+        const token = localStorage.getItem('jewel_token');
+        try {
+            if (token) {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+            }
+        } catch {
+            /* ignore */
+        }
         localStorage.removeItem('jewel_token');
         localStorage.removeItem('jewel_user');
         set({ auth: { isAuthenticated: false, user: null, token: null } });

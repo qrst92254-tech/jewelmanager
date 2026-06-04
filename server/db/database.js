@@ -4,6 +4,7 @@ const initSqlJs = require('sql.js');
 
 const dbPath = path.join(__dirname, 'jewel-shop.db');
 const schemaPath = path.join(__dirname, 'schema.sql');
+const { runTenantMigrations } = require('./tenantMigration');
 
 let db;
 
@@ -19,6 +20,8 @@ async function initializeDatabase() {
         dbFileBuffer = fs.readFileSync(dbPath);
         console.log('Loading existing database from file.');
         db = new SQL.Database(dbFileBuffer);
+        runTenantMigrations(db);
+        saveDatabase();
     } catch (error) {
         // If it doesn't exist, create a new one
         console.log('Database file not found, creating a new one.');
@@ -29,6 +32,8 @@ async function initializeDatabase() {
             db.exec(schema);
             console.log('Database schema loaded and applied.');
             // Write the new database with schema to the file
+            saveDatabase();
+            runTenantMigrations(db);
             saveDatabase();
         } catch (schemaError) {
             console.error('Error loading or applying schema:', schemaError.message);

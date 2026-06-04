@@ -25,7 +25,12 @@ const Dashboard = () => {
                 });
 
                 if (response.status === 401 || response.status === 403) {
+                    const body = await response.json().catch(() => ({}));
                     localStorage.removeItem('jewel_token');
+                    localStorage.removeItem('jewel_user');
+                    if (body.code === 'SESSION_INVALIDATED') {
+                        alert('You have been logged out because your account was accessed on another device.');
+                    }
                     navigate('/login');
                     return;
                 }

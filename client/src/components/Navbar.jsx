@@ -134,6 +134,9 @@ const Navbar = () => {
 
                         <NavSectionTitle>System</NavSectionTitle>
                         <NavItem to="/settings" icon={<Settings size={18} />}>Settings</NavItem>
+                        {(user === import.meta.env.VITE_ADMIN_EMAIL || user === import.meta.env.VITE_CREATOR_EMAIL) && (
+                            <NavItem to="/admin/users" icon={<Users size={18} />}>User Management</NavItem>
+                        )}
                     </div>
                 </div>
 
