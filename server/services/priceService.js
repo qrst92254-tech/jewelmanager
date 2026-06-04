@@ -57,11 +57,15 @@ function gramsFromTroyOunce(pricePerOunce) {
   return pricePerOunce / TROY_OUNCE_TO_GRAM;
 }
 
-function saveToCache(prices) {
+function saveToCache(prices, metalName = 'XAU') {
+  if (!metalName || metalName === undefined) {
+    console.log('Skipping price cache: metal name is missing');
+    return;
+  }
   try {
     const db = getDatabase();
     const stmt = db.prepare('INSERT INTO price_cache (metal, currency, price, source) VALUES (?, ?, ?, ?)');
-    stmt.run('XAU', 'INR', JSON.stringify(prices), prices.source);
+    stmt.run(metalName, 'INR', JSON.stringify(prices), prices.source);
   } catch (error) {
     console.error('Error caching price to database:', error.message);
   }

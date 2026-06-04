@@ -39,7 +39,7 @@ router.post('/signup', requireFormOrJson, async (req, res) => {
             return res.status(500).render('signup', { error: 'Unable to create account. Please try again.' });
         }
 
-        const userInsert = await supabaseAdmin.from('users').insert({
+        const userInsert = await supabaseAdmin.from('users').upsert({
             id: user.id,
             email,
             full_name,
@@ -47,7 +47,7 @@ router.post('/signup', requireFormOrJson, async (req, res) => {
             city,
             role: 'user',
             created_at: new Date().toISOString(),
-        });
+        }, { onConflict: 'id', ignoreDuplicates: false });
 
         if (userInsert.error) {
             console.error('Supabase users insert failed:', userInsert.error);
