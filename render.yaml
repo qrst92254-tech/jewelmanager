@@ -7,9 +7,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: SQLITE_DB_PATH
-        value: /var/data/jewel-shop.db
-    disk:
-      name: jewelshop-data
-      mountPath: /var/data
-      sizeGB: 1
+      - key: SUPABASE_URL
+        value: your_supabase_project_url
+      - key: SUPABASE_ANON_KEY
+        value: your_supabase_anon_key

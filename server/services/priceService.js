@@ -1,4 +1,4 @@
-const { getDatabase } = require('../db/database');
+const { supabase, supabaseAdmin } = require('./supabase');
 const cheerio = require('cheerio');
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
@@ -63,28 +63,36 @@ function saveToCache(prices, metalName = 'XAU') {
     return;
   }
   try {
-    const db = getDatabase();
-    const stmt = db.prepare('INSERT INTO price_cache (metal, currency, price, source) VALUES (?, ?, ?, ?)');
-    stmt.run(metalName, 'INR', JSON.stringify(prices), prices.source);
+    supabaseAdmin.from('price_cache').insert({
+      metal: metalName,
+      currency: 'INR',
+      prices: JSON.stringify(prices),
+      price: 0,
+      source: prices.source
+    }).then(({ error }) => {
+      if (error) console.error('Error caching price to Supabase:', error.message);
+    });
   } catch (error) {
     console.error('Error caching price to database:', error.message);
   }
 }
 
-function getLastCachedPrice() {
+async function getLastCachedPrice() {
   try {
-    const db = getDatabase();
-    const stmt = db.prepare('SELECT price, fetched_at FROM price_cache WHERE metal = ? ORDER BY fetched_at DESC LIMIT 1');
-    const record = stmt.get('XAU');
-    if (record && record.price) {
-      try {
-        return JSON.parse(record.price);
-      } catch (e) {
-        console.error('Failed to parse cached price:', e.message);
-        return null;
-      }
+    const { data, error } = await supabase
+      .from('price_cache')
+      .select('prices, fetched_at')
+      .eq('metal', 'XAU')
+      .order('fetched_at', { ascending: false })
+      .limit(1)
+      .single();
+    if (error || !data || !data.prices) return null;
+    try {
+      return JSON.parse(data.prices);
+    } catch (e) {
+      console.error('Failed to parse cached price:', e.message);
+      return null;
     }
-    return null;
   } catch (error) {
     console.error('Error retrieving latest cached price:', error.message);
     return null;
@@ -250,7 +258,7 @@ async function getLivePrices() {
     return prices;
   } catch (error) {
     console.error('❌ Price service failed:', error.message);
-    const cached = getLastCachedPrice();
+    const cached = await getLastCachedPrice();
     if (cached) {
       return applyDerivedRates({ ...cached, source: 'db_cache', is_fallback: true });
     }

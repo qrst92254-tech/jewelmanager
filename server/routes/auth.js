@@ -1,7 +1,7 @@
 const express = require('express');
 const { supabase, supabaseAdmin } = require('../services/supabase');
 const { requireFormOrJson, requireApiAuth, isAdminEmail } = require('../middleware/auth');
-const { getDatabase, convertSqljsResult, queryAll } = require('../db/database');
+const { queryAll } = require('../db/database');
 const { tenantId } = require('../db/tenant');
 
 const router = express.Router();
@@ -110,34 +110,40 @@ router.get('/me', requireApiAuth, (req, res) => {
   });
 });
 
-router.get('/dashboard-stats', requireApiAuth, (req, res) => {
+router.get('/dashboard-stats', requireApiAuth, async (req, res) => {
   try {
     const uid = tenantId(req);
-    const db = getDatabase();
     const today = new Date().toISOString().split('T')[0];
 
-    const todaySales = queryAll(
-      `SELECT COUNT(*) as count, COALESCE(SUM(final_amount), 0) as revenue FROM sales WHERE user_id = ? AND date(sale_date) = ?`,
-      [uid, today]
-    )[0] || { count: 0, revenue: 0 };
+    // Get today's sales count and revenue
+    const todaySalesData = await queryAll('sales', {
+      select: 'final_amount',
+      gte: { sale_date: today + 'T00:00:00.000Z' },
+      lte: { sale_date: today + 'T23:59:59.999Z' }
+    }, uid);
+    const todaySales = {
+      count: todaySalesData.length,
+      revenue: todaySalesData.reduce((sum, s) => sum + (parseFloat(s.final_amount) || 0), 0)
+    };
 
-    const stock = queryAll(
-      `SELECT COUNT(*) as uniqueProducts, COALESCE(SUM(quantity), 0) as totalStock FROM products WHERE user_id = ?`,
-      [uid]
-    )[0] || { uniqueProducts: 0, totalStock: 0 };
+    // Get stock info
+    const products = await queryAll('products', {}, uid);
+    const stock = {
+      uniqueProducts: products.length,
+      totalStock: products.reduce((sum, p) => sum + (parseInt(p.quantity) || 0), 0)
+    };
 
-    const products = queryAll(
-      'SELECT name, sku, quantity, stock_alert_threshold FROM products WHERE user_id = ?',
-      [uid]
-    );
+    // Get low stock items
     const lowStockItems = products.filter(
       (p) => p.quantity <= (p.stock_alert_threshold || 1)
-    );
+    ).slice(0, 5);
 
-    const recentSales = queryAll(
-      `SELECT bill_number, sale_date, final_amount FROM sales WHERE user_id = ? ORDER BY sale_date DESC LIMIT 7`,
-      [uid]
-    );
+    // Get recent sales
+    const recentSales = await queryAll('sales', {
+      select: 'bill_number,sale_date,final_amount',
+      order: { column: 'sale_date', ascending: false },
+      limit: 7
+    }, uid);
 
     res.json({
       todayRevenue: todaySales.revenue,
@@ -145,7 +151,7 @@ router.get('/dashboard-stats', requireApiAuth, (req, res) => {
       uniqueProducts: stock.uniqueProducts,
       totalStock: stock.totalStock,
       lowStockCount: lowStockItems.length,
-      lowStockItems: lowStockItems.slice(0, 5),
+      lowStockItems,
       recentSales,
     });
   } catch (err) {

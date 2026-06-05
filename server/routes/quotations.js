@@ -1,70 +1,103 @@
 const express = require('express');
 const router = express.Router();
-const { getDatabase, saveDatabase } = require('../db/database');
+const { queryAll, queryOne, insert, update } = require('../db/database');
 const { tenantId } = require('../db/tenant');
-const { nextSequentialNumber } = require('../db/documentNumbers');
+const { supabase } = require('../services/supabase');
 
-const toObjects = (res) => {
-  if (!res || res.length === 0) return [];
-  const cols = res[0].columns;
-  return res[0].values.map(row => { const obj = {}; cols.forEach((c, i) => (obj[c] = row[i])); return obj; });
-};
+// Helper function to generate next sequential number
+async function nextSequentialNumber(table, column, prefix) {
+  const { data, error } = await supabase
+    .from(table)
+    .select(column)
+    .order(column, { ascending: false })
+    .limit(1);
+  
+  if (error || !data || data.length === 0) {
+    return `${prefix}-0001`;
+  }
+  
+  const lastNumber = data[0][column];
+  const num = parseInt(lastNumber.split('-')[1]) || 0;
+  return `${prefix}-${String(num + 1).padStart(4, '0')}`;
+}
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   try {
-    res.json(toObjects(db.exec('SELECT * FROM quotations WHERE user_id = ? ORDER BY created_at DESC', [uid])));
+    const quotations = await queryAll('quotations', {
+      order: { column: 'created_at', ascending: false }
+    }, uid);
+    res.json(quotations);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   try {
-    const rows = toObjects(db.exec('SELECT * FROM quotations WHERE id=? AND user_id=?', [req.params.id, uid]));
-    if (!rows.length) return res.status(404).json({ error: 'Not found' });
-    const items = toObjects(db.exec('SELECT * FROM quotation_items WHERE quotation_id=?', [req.params.id]));
-    res.json({ ...rows[0], items });
+    const quotation = await queryOne('quotations', { eq: { id: parseInt(req.params.id) } }, uid);
+    if (!quotation) return res.status(404).json({ error: 'Not found' });
+    
+    const { data: items, error: itemsError } = await supabase
+      .from('quotation_items')
+      .select('*')
+      .eq('quotation_id', parseInt(req.params.id));
+
+    if (itemsError) {
+      console.error('Error fetching quotation items:', itemsError.message);
+      return res.status(500).json({ error: itemsError.message });
+    }
+
+    res.json({ ...quotation, items: items || [] });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   const { customer_name, customer_phone, gold_rate_used, silver_rate_used, valid_until,
     subtotal, gst_amount, grand_total, notes, items } = req.body;
   try {
-    const quotation_number = nextSequentialNumber('quotations', 'quotation_number', 'QUO');
-    db.run(`INSERT INTO quotations 
-      (user_id, quotation_number, customer_name, customer_phone, gold_rate_used, silver_rate_used, valid_until, subtotal, gst_amount, grand_total, notes)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-      [uid, quotation_number, customer_name || null, customer_phone || null, gold_rate_used || null,
-        silver_rate_used || null, valid_until || null, subtotal || 0, gst_amount || 0, grand_total || 0, notes || null]);
-    const id = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
+    const quotation_number = await nextSequentialNumber('quotations', 'quotation_number', 'QUO');
+    const quotationData = {
+      quotation_number, customer_name, customer_phone, gold_rate_used, silver_rate_used, valid_until,
+      subtotal, gst_amount, grand_total, notes
+    };
+    const result = await insert('quotations', quotationData, uid);
+    const quotation_id = result.id;
+
     if (items && items.length > 0) {
-      for (const item of items) {
-        db.run(`INSERT INTO quotation_items (quotation_id,product_name,category,purity,net_weight,rate_per_gram,metal_value,making_charges,stone_charges,gst_amount,item_total,quantity)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-          [id, item.product_name, item.category || null, item.purity || null, item.net_weight || 0,
-            item.rate_per_gram || 0, item.metal_value || 0, item.making_charges || 0, item.stone_charges || 0,
-            item.gst_amount || 0, item.item_total || 0, item.quantity || 1]);
-      }
+      const itemsToInsert = items.map(item => ({
+        quotation_id,
+        product_name: item.product_name,
+        category: item.category,
+        purity: item.purity,
+        net_weight: item.net_weight,
+        rate_per_gram: item.rate_per_gram,
+        metal_value: item.metal_value,
+        making_charges: item.making_charges,
+        stone_charges: item.stone_charges,
+        gst_amount: item.gst_amount,
+        item_total: item.item_total,
+        quantity: item.quantity
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('quotation_items')
+        .insert(itemsToInsert);
+
+      if (itemsError) throw itemsError;
     }
-    saveDatabase();
-    res.status(201).json({ id, quotation_number });
+
+    res.status(201).json({ id: quotation_id, quotation_number: result.quotation_number });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   const { status, converted_to_sale_id } = req.body;
   try {
-    db.run('UPDATE quotations SET status=?, converted_to_sale_id=? WHERE id=? AND user_id=?',
-      [status, converted_to_sale_id || null, req.params.id, uid]);
-    if (db.getRowsModified() === 0) return res.status(404).json({ error: 'Not found' });
-    saveDatabase();
+    const updateData = { status, converted_to_sale_id };
+    const result = await update('quotations', updateData, { id: parseInt(req.params.id) }, uid);
+    if (!result || result.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json({ message: 'Updated' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

@@ -1,101 +1,185 @@
 const express = require('express');
 const router = express.Router();
-const { getDatabase } = require('../db/database');
+const { queryAll } = require('../db/database');
 const { tenantId } = require('../db/tenant');
+const { supabase } = require('../services/supabase');
 
-const toObjects = (res) => {
-  if (!res || res.length === 0) return [];
-  const cols = res[0].columns;
-  return res[0].values.map(row => { const obj = {}; cols.forEach((c, i) => (obj[c] = row[i])); return obj; });
-};
-
-router.get('/sales/daily', (req, res) => {
+router.get('/sales/daily', async (req, res) => {
   const uid = tenantId(req);
   const { from, to } = req.query;
-  const db = getDatabase();
   const fromDate = from || new Date().toISOString().split('T')[0];
   const toDate = to || fromDate;
   try {
-    const sales = toObjects(db.exec(`SELECT s.*, COUNT(si.id) as item_count 
-      FROM sales s LEFT JOIN sale_items si ON s.id=si.sale_id 
-      WHERE s.user_id = ? AND date(s.sale_date) BETWEEN ? AND ? GROUP BY s.id ORDER BY s.sale_date DESC`,
-      [uid, fromDate, toDate]));
-    const summary = toObjects(db.exec(`SELECT COUNT(id) as total_bills, SUM(final_amount) as total_revenue,
-      SUM(cgst_amount) as total_cgst, SUM(sgst_amount) as total_sgst FROM sales WHERE user_id = ? AND date(sale_date) BETWEEN ? AND ?`,
-      [uid, fromDate, toDate]))[0];
-    res.json({ sales, summary, from: fromDate, to: toDate });
+    const { data: sales, error: salesError } = await supabase
+      .from('sales')
+      .select('*, sale_items!inner(id)')
+      .eq('user_id', uid)
+      .gte('sale_date', fromDate + 'T00:00:00.000Z')
+      .lte('sale_date', toDate + 'T23:59:59.999Z')
+      .order('sale_date', { ascending: false });
+
+    if (salesError) throw salesError;
+
+    const salesWithItemCount = sales.map(s => ({
+      ...s,
+      item_count: s.sale_items?.length || 0
+    }));
+
+    const { data: summary, error: summaryError } = await supabase
+      .from('sales')
+      .select('id, final_amount, cgst_amount, sgst_amount')
+      .eq('user_id', uid)
+      .gte('sale_date', fromDate + 'T00:00:00.000Z')
+      .lte('sale_date', toDate + 'T23:59:59.999Z');
+
+    if (summaryError) throw summaryError;
+
+    const summaryData = {
+      total_bills: summary.length,
+      total_revenue: summary.reduce((sum, s) => sum + (parseFloat(s.final_amount) || 0), 0),
+      total_cgst: summary.reduce((sum, s) => sum + (parseFloat(s.cgst_amount) || 0), 0),
+      total_sgst: summary.reduce((sum, s) => sum + (parseFloat(s.sgst_amount) || 0), 0)
+    };
+
+    res.json({ sales: salesWithItemCount, summary: summaryData, from: fromDate, to: toDate });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/gst', (req, res) => {
+router.get('/gst', async (req, res) => {
   const uid = tenantId(req);
   const { month, year } = req.query;
-  const db = getDatabase();
   const m = month || (new Date().getMonth() + 1);
   const y = year || new Date().getFullYear();
   try {
-    const sales = toObjects(db.exec(`SELECT * FROM sales WHERE user_id = ? AND strftime('%m', sale_date)=? AND strftime('%Y', sale_date)=? ORDER BY sale_date`,
-      [uid, String(m).padStart(2, '0'), String(y)]));
-    const totals = toObjects(db.exec(`SELECT SUM(total_amount) as taxable, SUM(cgst_amount) as cgst, SUM(sgst_amount) as sgst, SUM(final_amount) as total 
-      FROM sales WHERE user_id = ? AND strftime('%m', sale_date)=? AND strftime('%Y', sale_date)=?`,
-      [uid, String(m).padStart(2, '0'), String(y)]))[0];
+    const startDate = `${y}-${String(m).padStart(2, '0')}-01T00:00:00.000Z`;
+    const endDate = new Date(y, m, 0);
+    const endDateStr = `${y}-${String(m).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}T23:59:59.999Z`;
+
+    const { data: sales, error: salesError } = await supabase
+      .from('sales')
+      .select('*')
+      .eq('user_id', uid)
+      .gte('sale_date', startDate)
+      .lte('sale_date', endDateStr)
+      .order('sale_date', { ascending: true });
+
+    if (salesError) throw salesError;
+
+    const totals = {
+      taxable: sales.reduce((sum, s) => sum + (parseFloat(s.total_amount) || 0), 0),
+      cgst: sales.reduce((sum, s) => sum + (parseFloat(s.cgst_amount) || 0), 0),
+      sgst: sales.reduce((sum, s) => sum + (parseFloat(s.sgst_amount) || 0), 0),
+      total: sales.reduce((sum, s) => sum + (parseFloat(s.final_amount) || 0), 0)
+    };
+
     res.json({ sales, totals, month: m, year: y });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/stock', (req, res) => {
+router.get('/stock', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   try {
-    const products = toObjects(db.exec('SELECT * FROM products WHERE user_id = ? ORDER BY category, name', [uid]));
+    const products = await queryAll('products', {
+      order: [{ column: 'category', ascending: true }, { column: 'name', ascending: true }]
+    }, uid);
     const lowStock = products.filter(p => p.quantity <= (p.stock_alert_threshold || 1));
     res.json({ products, lowStock, total: products.length });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/top-products', (req, res) => {
+router.get('/top-products', async (req, res) => {
   const uid = tenantId(req);
   const { limit } = req.query;
-  const db = getDatabase();
   try {
-    const result = toObjects(db.exec(`SELECT p.name, p.sku, p.category, p.metal, p.purity, 
-      SUM(si.quantity) as total_sold, SUM(si.price_at_sale * si.quantity) as total_revenue
-      FROM sale_items si 
-      JOIN products p ON si.product_id=p.id AND p.user_id=?
-      JOIN sales s ON si.sale_id=s.id AND s.user_id=?
-      GROUP BY p.id ORDER BY total_sold DESC LIMIT ?`,
-      [uid, uid, Number(limit) || 10]));
+    const { data, error } = await supabase
+      .from('sale_items')
+      .select(`
+        quantity,
+        price_at_sale,
+        products!inner(name, sku, category, metal, purity, user_id)
+      `)
+      .eq('products.user_id', uid)
+      .order('quantity', { ascending: false })
+      .limit(Number(limit) || 10);
+
+    if (error) throw error;
+
+    const result = data.map(item => ({
+      name: item.products.name,
+      sku: item.products.sku,
+      category: item.products.category,
+      metal: item.products.metal,
+      purity: item.products.purity,
+      total_sold: item.quantity,
+      total_revenue: item.quantity * item.price_at_sale
+    }));
+
     res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/customers/:phone', (req, res) => {
+router.get('/customers/:phone', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   try {
-    const sales = toObjects(db.exec(`SELECT * FROM sales WHERE user_id = ? AND (customer_phone=? OR customer_name LIKE ?) ORDER BY sale_date DESC`,
-      [uid, req.params.phone, `%${req.params.phone}%`]));
-    res.json(sales);
+    const { data, error } = await supabase
+      .from('sales')
+      .select('*')
+      .eq('user_id', uid)
+      .or(`customer_phone.eq.${req.params.phone},customer_name.ilike.%${req.params.phone}%`)
+      .order('sale_date', { ascending: false });
+
+    if (error) throw error;
+    res.json(data || []);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/financial', (req, res) => {
+router.get('/financial', async (req, res) => {
   const uid = tenantId(req);
   const { from, to } = req.query;
-  const db = getDatabase();
   const fromDate = from || new Date().toISOString().split('T')[0];
   const toDate = to || fromDate;
   try {
-    const revenue = toObjects(db.exec(`SELECT SUM(final_amount) as total FROM sales WHERE user_id = ? AND date(sale_date) BETWEEN ? AND ?`, [uid, fromDate, toDate]))[0];
-    const expenses = toObjects(db.exec(`SELECT SUM(amount) as total FROM expenses WHERE user_id = ? AND expense_date BETWEEN ? AND ?`, [uid, fromDate, toDate]))[0];
-    const girviLoans = toObjects(db.exec(`SELECT SUM(loan_amount) as total FROM girvi_records WHERE user_id = ? AND status='active'`, [uid]))[0];
-    const customerOutstanding = toObjects(db.exec(`SELECT SUM(outstanding_amount) as total FROM customers WHERE user_id = ? AND outstanding_amount > 0`, [uid]))[0];
+    const { data: revenue, error: revenueError } = await supabase
+      .from('sales')
+      .select('final_amount')
+      .eq('user_id', uid)
+      .gte('sale_date', fromDate + 'T00:00:00.000Z')
+      .lte('sale_date', toDate + 'T23:59:59.999Z');
+
+    if (revenueError) throw revenueError;
+
+    const { data: expenses, error: expensesError } = await supabase
+      .from('expenses')
+      .select('amount')
+      .eq('user_id', uid)
+      .gte('expense_date', fromDate)
+      .lte('expense_date', toDate);
+
+    if (expensesError) throw expensesError;
+
+    const { data: girviLoans, error: girviError } = await supabase
+      .from('girvi_records')
+      .select('loan_amount')
+      .eq('user_id', uid)
+      .eq('status', 'active');
+
+    if (girviError) throw girviError;
+
+    const { data: customerOutstanding, error: customerError } = await supabase
+      .from('customers')
+      .select('outstanding_amount')
+      .eq('user_id', uid)
+      .gt('outstanding_amount', 0);
+
+    if (customerError) throw customerError;
+
     res.json({
-      revenue: revenue?.total || 0,
-      expenses: expenses?.total || 0,
-      profit: (revenue?.total || 0) - (expenses?.total || 0),
-      activeGirviLoans: girviLoans?.total || 0,
-      customerOutstanding: customerOutstanding?.total || 0,
+      revenue: (revenue || []).reduce((sum, s) => sum + (parseFloat(s.final_amount) || 0), 0),
+      expenses: (expenses || []).reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0),
+      profit: (revenue || []).reduce((sum, s) => sum + (parseFloat(s.final_amount) || 0), 0) - 
+              (expenses || []).reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0),
+      activeGirviLoans: (girviLoans || []).reduce((sum, g) => sum + (parseFloat(g.loan_amount) || 0), 0),
+      customerOutstanding: (customerOutstanding || []).reduce((sum, c) => sum + (parseFloat(c.outstanding_amount) || 0), 0),
       from: fromDate,
       to: toDate,
     });

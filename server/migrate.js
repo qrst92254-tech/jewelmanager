@@ -1,6 +1,11 @@
 /**
- * migrate.js - Run this ONCE to add all new tables to the live jewel-shop.db
- * Usage: node migrate.js
+ * migrate.js — DEPRECATED FOR SUPABASE
+ *
+ * This file was used to migrate a local SQLite database (jewel-shop.db).
+ * The app now uses Supabase (PostgreSQL) — schema is managed via
+ * supabase_schema.sql. Run that SQL in Supabase Dashboard → SQL Editor.
+ *
+ * This file is kept only for reference. Do NOT run it.
  */
 const fs = require('fs');
 const path = require('path');

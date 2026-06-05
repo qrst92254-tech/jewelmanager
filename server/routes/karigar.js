@@ -1,163 +1,230 @@
 const express = require('express');
 const router = express.Router();
-const { getDatabase, saveDatabase } = require('../db/database');
+const { queryAll, queryOne, insert, update, deleteRow } = require('../db/database');
 const { tenantId } = require('../db/tenant');
-const { nextSequentialNumber } = require('../db/documentNumbers');
+const { supabase } = require('../services/supabase');
 
-const toObjects = (res) => {
-  if (!res || res.length === 0) return [];
-  const cols = res[0].columns;
-  return res[0].values.map(row => {
-    const obj = {};
-    cols.forEach((c, i) => (obj[c] = row[i]));
-    return obj;
-  });
-};
+// Helper function to generate next sequential number
+async function nextSequentialNumber(table, column, prefix) {
+  const { data, error } = await supabase
+    .from(table)
+    .select(column)
+    .order(column, { ascending: false })
+    .limit(1);
+  
+  if (error || !data || data.length === 0) {
+    return `${prefix}-0001`;
+  }
+  
+  const lastNumber = data[0][column];
+  const num = parseInt(lastNumber.split('-')[1]) || 0;
+  return `${prefix}-${String(num + 1).padStart(4, '0')}`;
+}
 
-router.get('/job-cards/all', (req, res) => {
+router.get('/job-cards/all', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   try {
-    const result = db.exec(`SELECT jc.*, k.name as karigar_name FROM karigar_job_cards jc 
-      INNER JOIN karigars k ON jc.karigar_id = k.id AND k.user_id = ?
-      ORDER BY jc.rowid DESC`, [uid]);
-    res.json(toObjects(result));
+    const { data, error } = await supabase
+      .from('karigar_job_cards')
+      .select(`
+        *,
+        karigars!inner(name, user_id)
+      `)
+      .eq('karigars.user_id', uid)
+      .order('id', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching job cards:', error.message);
+      return res.status(500).json({ error: error.message });
+    }
+
+    const result = data.map(item => ({
+      ...item,
+      karigar_name: item.karigars.name
+    }));
+
+    res.json(result);
+  } catch (e) { 
+    res.status(500).json({ error: e.message }); 
+  }
+});
+
+router.get('/', async (req, res) => {
+  const uid = tenantId(req);
+  try {
+    const karigars = await queryAll('karigars', {
+      order: { column: 'created_at', ascending: false }
+    }, uid);
+    res.json(karigars);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/', (req, res) => {
+router.get('/:id', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   try {
-    res.json(toObjects(db.exec('SELECT * FROM karigars WHERE user_id = ? ORDER BY created_at DESC', [uid])));
+    const karigar = await queryOne('karigars', { eq: { id: parseInt(req.params.id) } }, uid);
+    if (!karigar) return res.status(404).json({ error: 'Not found' });
+    res.json(karigar);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/:id', (req, res) => {
+router.post('/', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
-  try {
-    const result = db.exec('SELECT * FROM karigars WHERE id = ? AND user_id = ?', [req.params.id, uid]);
-    const rows = toObjects(result);
-    if (!rows.length) return res.status(404).json({ error: 'Not found' });
-    res.json(rows[0]);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-router.post('/', (req, res) => {
-  const uid = tenantId(req);
-  const db = getDatabase();
   const { name, phone, address, skill_type, id_proof } = req.body;
   if (!name) return res.status(400).json({ error: 'Name required' });
+  
   try {
-    db.run('INSERT INTO karigars (user_id, name, phone, address, skill_type, id_proof) VALUES (?,?,?,?,?,?)',
-      [uid, name, phone || null, address || null, skill_type || null, id_proof || null]);
-    const id = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
-    saveDatabase();
-    res.status(201).json({ id, message: 'Karigar created' });
+    const karigarData = {
+      name, phone, address, skill_type, id_proof
+    };
+    const result = await insert('karigars', karigarData, uid);
+    res.status(201).json({ id: result.id, message: 'Karigar created' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   const { name, phone, address, skill_type, id_proof, is_active } = req.body;
+  
   try {
-    db.run('UPDATE karigars SET name=?, phone=?, address=?, skill_type=?, id_proof=?, is_active=? WHERE id=? AND user_id=?',
-      [name, phone, address, skill_type, id_proof, is_active ?? 1, req.params.id, uid]);
-    if (db.getRowsModified() === 0) return res.status(404).json({ error: 'Not found' });
-    saveDatabase();
+    const updateData = {
+      name, phone, address, skill_type, id_proof, is_active: is_active ?? true
+    };
+    const result = await update('karigars', updateData, { id: parseInt(req.params.id) }, uid);
+    if (!result || result.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json({ message: 'Updated' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   try {
-    db.run('UPDATE karigars SET is_active = 0 WHERE id = ? AND user_id = ?', [req.params.id, uid]);
-    if (db.getRowsModified() === 0) return res.status(404).json({ error: 'Not found' });
-    saveDatabase();
+    const result = await update('karigars', { is_active: false }, { id: parseInt(req.params.id) }, uid);
+    if (!result || result.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json({ message: 'Karigar removed' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/:id/transactions', (req, res) => {
+router.get('/:id/transactions', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   try {
-    const owned = toObjects(db.exec('SELECT id FROM karigars WHERE id=? AND user_id=?', [req.params.id, uid]));
-    if (!owned.length) return res.status(404).json({ error: 'Not found' });
-    const result = db.exec('SELECT * FROM karigar_transactions WHERE karigar_id=? ORDER BY created_at DESC', [req.params.id]);
-    res.json(toObjects(result));
+    const karigar = await queryOne('karigars', { eq: { id: parseInt(req.params.id) } }, uid);
+    if (!karigar) return res.status(404).json({ error: 'Not found' });
+    
+    const { data, error } = await supabase
+      .from('karigar_transactions')
+      .select('*')
+      .eq('karigar_id', parseInt(req.params.id))
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching transactions:', error.message);
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json(data || []);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/transactions', (req, res) => {
+router.post('/transactions', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   const { karigar_id, transaction_type, metal, gross_weight, fine_weight, purity,
     making_charges, wastage_percent, wastage_grams, order_description, expected_date, notes } = req.body;
+  
   try {
-    const owned = toObjects(db.exec('SELECT id FROM karigars WHERE id=? AND user_id=?', [karigar_id, uid]));
-    if (!owned.length) return res.status(404).json({ error: 'Karigar not found' });
+    const karigar = await queryOne('karigars', { eq: { id: karigar_id } }, uid);
+    if (!karigar) return res.status(404).json({ error: 'Karigar not found' });
 
-    db.run(`INSERT INTO karigar_transactions 
-      (karigar_id,transaction_type,metal,gross_weight,fine_weight,purity,making_charges,wastage_percent,wastage_grams,order_description,expected_date,notes)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [karigar_id, transaction_type, metal, gross_weight || 0, fine_weight || 0, purity,
-        making_charges || 0, wastage_percent || 0, wastage_grams || 0, order_description, expected_date || null, notes || null]);
+    const transactionData = {
+      karigar_id, transaction_type, metal, gross_weight, fine_weight, purity,
+      making_charges, wastage_percent, wastage_grams, order_description, expected_date, notes
+    };
 
+    const { data: transResult, error: transError } = await supabase
+      .from('karigar_transactions')
+      .insert(transactionData)
+      .select()
+      .single();
+
+    if (transError) throw transError;
+
+    // Update karigar balance
+    const delta = transaction_type === 'issue' ? (gross_weight || 0) : -(gross_weight || 0);
     if (metal === 'gold') {
-      const delta = transaction_type === 'issue' ? (gross_weight || 0) : -(gross_weight || 0);
-      db.run('UPDATE karigars SET balance_gold_grams = balance_gold_grams + ? WHERE id=? AND user_id=?', [delta, karigar_id, uid]);
+      await update('karigars', { balance_gold_grams: karigar.balance_gold_grams + delta }, { id: karigar_id }, uid);
     } else {
-      const delta = transaction_type === 'issue' ? (gross_weight || 0) : -(gross_weight || 0);
-      db.run('UPDATE karigars SET balance_silver_grams = balance_silver_grams + ? WHERE id=? AND user_id=?', [delta, karigar_id, uid]);
+      await update('karigars', { balance_silver_grams: karigar.balance_silver_grams + delta }, { id: karigar_id }, uid);
     }
 
-    const id = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
-    saveDatabase();
-    res.status(201).json({ id });
+    res.status(201).json({ id: transResult.id });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/job-cards', (req, res) => {
+router.post('/job-cards', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   const { karigar_id, product_description, category, purity, gold_issued_grams,
     making_charges, order_date, expected_date, notes } = req.body;
+  
   try {
-    const owned = toObjects(db.exec('SELECT id FROM karigars WHERE id=? AND user_id=?', [karigar_id, uid]));
-    if (!owned.length) return res.status(404).json({ error: 'Karigar not found' });
+    const karigar = await queryOne('karigars', { eq: { id: karigar_id } }, uid);
+    if (!karigar) return res.status(404).json({ error: 'Karigar not found' });
 
-    const job_card_number = nextSequentialNumber('karigar_job_cards', 'job_card_number', 'JOB');
+    const job_card_number = await nextSequentialNumber('karigar_job_cards', 'job_card_number', 'JOB');
 
-    db.run(`INSERT INTO karigar_job_cards 
-      (job_card_number,karigar_id,product_description,category,purity,gold_issued_grams,making_charges,order_date,expected_date,notes)
-      VALUES (?,?,?,?,?,?,?,?,?,?)`,
-      [job_card_number, karigar_id, product_description, category, purity, gold_issued_grams || 0,
-        making_charges || 0, order_date || null, expected_date || null, notes || null]);
-    const id = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
-    saveDatabase();
-    res.status(201).json({ id, job_card_number });
+    const jobCardData = {
+      karigar_id, job_card_number, product_description, category, purity,
+      gold_issued_grams, making_charges, order_date, expected_date, notes
+    };
+
+    const result = await supabase
+      .from('karigar_job_cards')
+      .insert(jobCardData)
+      .select()
+      .single();
+
+    if (result.error) throw result.error;
+
+    res.status(201).json({ id: result.data.id, job_card_number });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/job-cards/:id', (req, res) => {
+router.put('/job-cards/:id', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   const { status, gold_received_grams, wastage_grams, wastage_percent, completion_date } = req.body;
+  
   try {
-    db.run(`UPDATE karigar_job_cards SET status=?, gold_received_grams=?, wastage_grams=?, wastage_percent=?, completion_date=?
-      WHERE id=? AND karigar_id IN (SELECT id FROM karigars WHERE user_id=?)`,
-      [status, gold_received_grams || null, wastage_grams || null, wastage_percent || null, completion_date || null, req.params.id, uid]);
-    if (db.getRowsModified() === 0) return res.status(404).json({ error: 'Not found' });
-    if (status === 'completed') {
-      db.run(`UPDATE karigars SET total_orders_completed = total_orders_completed + 1 
-        WHERE user_id=? AND id = (SELECT karigar_id FROM karigar_job_cards WHERE id=?)`, [uid, req.params.id]);
+    // Get the job card to find karigar_id
+    const { data: jobCard, error: jobCardError } = await supabase
+      .from('karigar_job_cards')
+      .select('karigar_id')
+      .eq('id', parseInt(req.params.id))
+      .single();
+
+    if (jobCardError || !jobCard) {
+      return res.status(404).json({ error: 'Job card not found' });
     }
-    saveDatabase();
+
+    // Verify karigar belongs to user
+    const karigar = await queryOne('karigars', { eq: { id: jobCard.karigar_id } }, uid);
+    if (!karigar) return res.status(404).json({ error: 'Not found' });
+
+    const updateData = {
+      status, gold_received_grams, wastage_grams, wastage_percent, completion_date
+    };
+
+    const { error: updateError } = await supabase
+      .from('karigar_job_cards')
+      .update(updateData)
+      .eq('id', parseInt(req.params.id));
+
+    if (updateError) throw updateError;
+
+    if (status === 'completed') {
+      await update('karigars', { 
+        total_orders_completed: karigar.total_orders_completed + 1 
+      }, { id: jobCard.karigar_id }, uid);
+    }
+
     res.json({ message: 'Updated' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

@@ -1,114 +1,152 @@
 const express = require('express');
 const router = express.Router();
-const { getDatabase, saveDatabase } = require('../db/database');
+const { queryAll, queryOne, insert, update } = require('../db/database');
 const { tenantId } = require('../db/tenant');
-const { nextSequentialNumber } = require('../db/documentNumbers');
+const { supabase } = require('../services/supabase');
 
-const toObjects = (res) => {
-  if (!res || res.length === 0) return [];
-  const cols = res[0].columns;
-  return res[0].values.map(row => {
-    const obj = {};
-    cols.forEach((c, i) => (obj[c] = row[i]));
-    return obj;
-  });
-};
+// Helper function to generate next girvi number
+async function genGirviNumber() {
+  const { data, error } = await supabase
+    .from('girvi_records')
+    .select('girvi_number')
+    .order('girvi_number', { ascending: false })
+    .limit(1);
+  
+  if (error || !data || data.length === 0) {
+    return 'GRV-0001';
+  }
+  
+  const lastNumber = data[0].girvi_number;
+  const num = parseInt(lastNumber.split('-')[1]) || 0;
+  return `GRV-${String(num + 1).padStart(4, '0')}`;
+}
 
-const genGirviNumber = () => nextSequentialNumber('girvi_records', 'girvi_number', 'GRV');
-
-router.get('/summary/overdue', (req, res) => {
+router.get('/summary/overdue', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   try {
     const today = new Date().toISOString().split('T')[0];
-    const overdue = toObjects(db.exec(
-      `SELECT * FROM girvi_records WHERE user_id=? AND status='active' AND due_date < ? ORDER BY due_date ASC`,
-      [uid, today]
-    ));
-    const dueSoon = toObjects(db.exec(
-      `SELECT * FROM girvi_records WHERE user_id=? AND status='active' AND due_date BETWEEN ? AND date(?,'+7 days') ORDER BY due_date ASC`,
-      [uid, today, today]
-    ));
+    
+    const overdue = await queryAll('girvi_records', {
+      eq: { status: 'active' },
+      lt: { due_date: today },
+      order: { column: 'due_date', ascending: true }
+    }, uid);
+
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const nextWeekStr = nextWeek.toISOString().split('T')[0];
+
+    const dueSoon = await queryAll('girvi_records', {
+      eq: { status: 'active' },
+      gte: { due_date: today },
+      lte: { due_date: nextWeekStr },
+      order: { column: 'due_date', ascending: true }
+    }, uid);
+
     res.json({ overdue, dueSoon });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const uid = tenantId(req);
   const { status } = req.query;
-  const db = getDatabase();
   try {
-    let sql = 'SELECT * FROM girvi_records WHERE user_id = ?';
-    const params = [uid];
-    if (status && status !== 'all') { sql += ' AND status=?'; params.push(status); }
-    sql += ' ORDER BY created_at DESC';
-    res.json(toObjects(db.exec(sql, params)));
+    let options = {
+      order: { column: 'created_at', ascending: false }
+    };
+
+    if (status && status !== 'all') {
+      options.eq = { status };
+    }
+
+    const girviRecords = await queryAll('girvi_records', options, uid);
+    res.json(girviRecords);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   try {
-    const rows = toObjects(db.exec('SELECT * FROM girvi_records WHERE id=? AND user_id=?', [req.params.id, uid]));
-    if (!rows.length) return res.status(404).json({ error: 'Not found' });
-    const payments = toObjects(db.exec('SELECT * FROM girvi_payments WHERE girvi_id=? ORDER BY payment_date DESC', [req.params.id]));
-    res.json({ ...rows[0], payments });
+    const girvi = await queryOne('girvi_records', { eq: { id: parseInt(req.params.id) } }, uid);
+    if (!girvi) return res.status(404).json({ error: 'Not found' });
+    
+    const { data: payments, error: paymentsError } = await supabase
+      .from('girvi_payments')
+      .select('*')
+      .eq('girvi_id', parseInt(req.params.id))
+      .order('payment_date', { ascending: false });
+
+    if (paymentsError) {
+      console.error('Error fetching girvi payments:', paymentsError.message);
+      return res.status(500).json({ error: paymentsError.message });
+    }
+
+    res.json({ ...girvi, payments: payments || [] });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   const { customer_name, customer_phone, customer_address, customer_id_proof,
     item_description, item_type, metal, purity, gross_weight, net_weight, stone_weight,
     valuation_rate, metal_value, loan_amount, interest_rate, interest_type,
     pledge_date, due_date, notes } = req.body;
+  
   if (!customer_name || !customer_phone || !item_description || !gross_weight || !loan_amount || !pledge_date) {
     return res.status(400).json({ error: 'Required fields missing' });
   }
+  
   try {
-    const girvi_number = genGirviNumber();
-    db.run(`INSERT INTO girvi_records 
-      (user_id, girvi_number, customer_name, customer_phone, customer_address, customer_id_proof,
-       item_description, item_type, metal, purity, gross_weight, net_weight, stone_weight,
-       valuation_rate, metal_value, loan_amount, interest_rate, interest_type, pledge_date, due_date, notes)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [uid, girvi_number, customer_name, customer_phone, customer_address || null, customer_id_proof || null,
-        item_description, item_type || null, metal || null, purity || null, gross_weight, net_weight || null, stone_weight || 0,
-        valuation_rate || null, metal_value || null, loan_amount, interest_rate || 2.0, interest_type || 'simple',
-        pledge_date, due_date || null, notes || null]);
-    const id = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
-    saveDatabase();
-    res.status(201).json({ id, girvi_number });
+    const girvi_number = await genGirviNumber();
+    const girviData = {
+      customer_name, customer_phone, customer_address, customer_id_proof,
+      item_description, item_type, metal, purity, gross_weight, net_weight, stone_weight,
+      valuation_rate, metal_value, loan_amount, interest_rate, interest_type,
+      pledge_date, due_date, notes
+    };
+
+    const result = await insert('girvi_records', girviData, uid);
+    res.status(201).json({ id: result.id, girvi_number: result.girvi_number });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   const { status, release_date, notes, transferred_to } = req.body;
+  
   try {
-    db.run('UPDATE girvi_records SET status=?, release_date=?, notes=?, transferred_to=? WHERE id=? AND user_id=?',
-      [status, release_date || null, notes || null, transferred_to || null, req.params.id, uid]);
-    if (db.getRowsModified() === 0) return res.status(404).json({ error: 'Not found' });
-    saveDatabase();
+    const updateData = {
+      status, release_date, notes, transferred_to
+    };
+    const result = await update('girvi_records', updateData, { id: parseInt(req.params.id) }, uid);
+    if (!result || result.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json({ message: 'Updated' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/:id/payments', (req, res) => {
+router.post('/:id/payments', async (req, res) => {
   const uid = tenantId(req);
-  const db = getDatabase();
   const { payment_date, amount_paid, interest_amount, principal_amount, payment_method, notes } = req.body;
+  
   try {
-    const owned = toObjects(db.exec('SELECT id FROM girvi_records WHERE id=? AND user_id=?', [req.params.id, uid]));
-    if (!owned.length) return res.status(404).json({ error: 'Not found' });
-    db.run(`INSERT INTO girvi_payments (girvi_id,payment_date,amount_paid,interest_amount,principal_amount,payment_method,notes)
-      VALUES (?,?,?,?,?,?,?)`,
-      [req.params.id, payment_date, amount_paid, interest_amount || null, principal_amount || null, payment_method || 'cash', notes || null]);
-    db.run('UPDATE girvi_records SET total_paid = total_paid + ? WHERE id=? AND user_id=?', [amount_paid, req.params.id, uid]);
-    saveDatabase();
+    const girvi = await queryOne('girvi_records', { eq: { id: parseInt(req.params.id) } }, uid);
+    if (!girvi) return res.status(404).json({ error: 'Not found' });
+
+    const paymentData = {
+      girvi_id: parseInt(req.params.id),
+      payment_date, amount_paid, interest_amount, principal_amount, payment_method, notes
+    };
+
+    const { error: paymentError } = await supabase
+      .from('girvi_payments')
+      .insert(paymentData);
+
+    if (paymentError) throw paymentError;
+
+    await update('girvi_records', { 
+      total_paid: (girvi.total_paid || 0) + amount_paid 
+    }, { id: parseInt(req.params.id) }, uid);
+
     res.status(201).json({ message: 'Payment recorded' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
