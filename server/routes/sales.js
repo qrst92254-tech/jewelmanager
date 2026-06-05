@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { getDatabase, saveDatabase, convertSqljsResult, queryAll, queryOne, lastInsertRowId } = require('../db/database');
+const { getDatabase, saveDatabase, queryAll, queryOne, lastInsertRowId } = require('../db/database');
 const { tenantId } = require('../db/tenant');
+const { nextSaleBillNumber } = require('../db/documentNumbers');
 
 router.get('/', (req, res) => {
     const uid = tenantId(req);
@@ -29,7 +30,7 @@ router.get('/:id', (req, res) => {
         }
 
         const items = queryAll(`
-            SELECT si.quantity, si.price_at_sale, p.name, p.sku, p.metal, p.purity
+            SELECT si.quantity, si.price_at_sale, p.name, p.sku, p.metal, p.purity, p.net_weight, p.hsn_code
             FROM sale_items si
             JOIN products p ON si.product_id = p.id AND p.user_id = ?
             WHERE si.sale_id = ?
@@ -70,11 +71,7 @@ router.post('/', (req, res) => {
         const sgst_amount = final_amount_before_gst * (sgst_rate / 100);
         const final_amount = final_amount_before_gst + cgst_amount + sgst_amount;
 
-        const date = new Date();
-        const prefix = `INV-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}-`;
-        const lastSale = queryOne('SELECT id FROM sales WHERE user_id = ? ORDER BY id DESC LIMIT 1', [uid]);
-        const nextId = lastSale ? lastSale.id + 1 : 1;
-        const bill_number = prefix + nextId.toString().padStart(4, '0');
+        const bill_number = nextSaleBillNumber();
 
         const saleStmt = db.prepare(`
             INSERT INTO sales (user_id, bill_number, customer_name, customer_phone, total_amount, discount, cgst_rate, sgst_rate, cgst_amount, sgst_amount, final_amount, payment_mode, notes)

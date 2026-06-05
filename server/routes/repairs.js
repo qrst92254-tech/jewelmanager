@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDatabase, saveDatabase } = require('../db/database');
 const { tenantId } = require('../db/tenant');
+const { nextSequentialNumber } = require('../db/documentNumbers');
 
 const toObjects = (res) => {
   if (!res || res.length === 0) return [];
@@ -54,9 +55,7 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'Required fields missing' });
   }
   try {
-    const yr = new Date().getFullYear();
-    const cnt = db.exec('SELECT COUNT(*) as c FROM repair_orders WHERE user_id=?', [uid])[0]?.values[0][0] || 0;
-    const job_number = `REP-${yr}-${String(Number(cnt) + 1).padStart(4, '0')}`;
+    const job_number = nextSequentialNumber('repair_orders', 'job_number', 'REP');
     db.run(`INSERT INTO repair_orders 
       (user_id, job_number, customer_name, customer_phone, item_description, item_type, metal, purity, weight,
        repair_type, problem_description, estimated_charges, advance_paid, received_date, promised_date,

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDatabase, saveDatabase } = require('../db/database');
 const { tenantId } = require('../db/tenant');
+const { nextSequentialNumber } = require('../db/documentNumbers');
 
 const toObjects = (res) => {
   if (!res || res.length === 0) return [];
@@ -34,9 +35,7 @@ router.post('/', (req, res) => {
   const { customer_name, customer_phone, gold_rate_used, silver_rate_used, valid_until,
     subtotal, gst_amount, grand_total, notes, items } = req.body;
   try {
-    const yr = new Date().getFullYear();
-    const cnt = db.exec('SELECT COUNT(*) as c FROM quotations WHERE user_id=?', [uid])[0]?.values[0][0] || 0;
-    const quotation_number = `QUO-${yr}-${String(Number(cnt) + 1).padStart(4, '0')}`;
+    const quotation_number = nextSequentialNumber('quotations', 'quotation_number', 'QUO');
     db.run(`INSERT INTO quotations 
       (user_id, quotation_number, customer_name, customer_phone, gold_rate_used, silver_rate_used, valid_until, subtotal, gst_amount, grand_total, notes)
       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,

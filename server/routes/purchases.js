@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDatabase, saveDatabase } = require('../db/database');
 const { tenantId } = require('../db/tenant');
+const { nextSequentialNumber } = require('../db/documentNumbers');
 
 const toObjects = (res) => {
   if (!res || res.length === 0) return [];
@@ -78,9 +79,7 @@ router.post('/orders', (req, res) => {
     const supplier = toObjects(db.exec('SELECT id FROM suppliers WHERE id=? AND user_id=?', [supplier_id, uid]));
     if (!supplier.length) return res.status(400).json({ error: 'Supplier not found' });
 
-    const yr = new Date().getFullYear();
-    const cnt = db.exec('SELECT COUNT(*) as c FROM purchase_orders WHERE user_id=?', [uid])[0]?.values[0][0] || 0;
-    const po_number = `PO-${yr}-${String(Number(cnt) + 1).padStart(4, '0')}`;
+    const po_number = nextSequentialNumber('purchase_orders', 'po_number', 'PO');
     db.run(`INSERT INTO purchase_orders (user_id, po_number, supplier_id, order_date, expected_date, subtotal, gst_amount, grand_total, amount_paid, payment_method, notes)
       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
       [uid, po_number, supplier_id, order_date, expected_date || null, subtotal || 0, gst_amount || 0,

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDatabase, saveDatabase } = require('../db/database');
 const { tenantId } = require('../db/tenant');
+const { nextSequentialNumber } = require('../db/documentNumbers');
 
 const toObjects = (res) => {
   if (!res || res.length === 0) return [];
@@ -130,12 +131,7 @@ router.post('/job-cards', (req, res) => {
     const owned = toObjects(db.exec('SELECT id FROM karigars WHERE id=? AND user_id=?', [karigar_id, uid]));
     if (!owned.length) return res.status(404).json({ error: 'Karigar not found' });
 
-    const yr = new Date().getFullYear();
-    const last = db.exec(
-      `SELECT COUNT(*) as c FROM karigar_job_cards jc INNER JOIN karigars k ON jc.karigar_id=k.id WHERE k.user_id=?`,
-      [uid]
-    )[0]?.values[0][0] || 0;
-    const job_card_number = `JOB-${yr}-${String(Number(last) + 1).padStart(4, '0')}`;
+    const job_card_number = nextSequentialNumber('karigar_job_cards', 'job_card_number', 'JOB');
 
     db.run(`INSERT INTO karigar_job_cards 
       (job_card_number,karigar_id,product_description,category,purity,gold_issued_grams,making_charges,order_date,expected_date,notes)

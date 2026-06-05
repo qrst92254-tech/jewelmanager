@@ -12,6 +12,7 @@ const Sales = () => {
     const [products, setProducts] = useState([]);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedSale, setSelectedSale] = useState(null);
+    const [shopSettings, setShopSettings] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -93,23 +94,19 @@ const Sales = () => {
 
     const handleViewBill = async (id) => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const response = await fetch(`${API_URL}/api/sales/${id}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (!response.ok) throw new Error('Failed to fetch sale details');
-            const data = await response.json();
-            setSelectedSale(data);
+            const [sale, settings] = await Promise.all([
+                authFetch(`${API_URL}/api/sales/${id}`),
+                authFetch(`${API_URL}/api/settings`),
+            ]);
+            setShopSettings(settings);
+            setSelectedSale(sale);
         } catch (err) {
             alert(`Error: ${err.message}`);
         }
     };
 
     const handlePrint = useReactToPrint({
-        content: () => billRef.current,
+        contentRef: billRef,
         documentTitle: `Invoice-${selectedSale?.bill_number || 'bill'}`,
     });
 
@@ -236,7 +233,7 @@ const Sales = () => {
                         </div>
                         {/* Bill Content */}
                         <div style={{ padding: '1.5rem', overflowY: 'auto' }}>
-                            <BillTemplate ref={billRef} sale={selectedSale} />
+                            <BillTemplate ref={billRef} sale={selectedSale} shop={shopSettings} />
                         </div>
                     </div>
                 </div>

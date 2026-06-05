@@ -30,10 +30,10 @@ const Settings = () => {
             if (res.ok) {
                 const data = await res.json();
                 if (data.shop_name) setShopName(data.shop_name);
-                if (data.address) setAddress(data.address);
-                if (data.phone) setPhone(data.phone);
-                if (data.gstin) setGstin(data.gstin);
-                if (data.invoice_terms) setInvoiceTerms(data.invoice_terms);
+                if (data.shop_address || data.address) setAddress(data.shop_address || data.address);
+                if (data.shop_phone || data.phone) setPhone(data.shop_phone || data.phone);
+                if (data.shop_gstin || data.gstin) setGstin(data.shop_gstin || data.gstin);
+                if (data.bill_footer || data.invoice_terms) setInvoiceTerms(data.bill_footer || data.invoice_terms);
             }
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
@@ -58,10 +58,14 @@ const Settings = () => {
                 body: JSON.stringify({
                     settings: {
                         shop_name: shopName,
+                        shop_address: address,
+                        shop_phone: phone,
+                        shop_gstin: gstin,
+                        bill_footer: invoiceTerms,
                         address,
                         phone,
                         gstin,
-                        invoice_terms: invoiceTerms
+                        invoice_terms: invoiceTerms,
                     }
                 })
             });

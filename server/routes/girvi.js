@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDatabase, saveDatabase } = require('../db/database');
 const { tenantId } = require('../db/tenant');
+const { nextSequentialNumber } = require('../db/documentNumbers');
 
 const toObjects = (res) => {
   if (!res || res.length === 0) return [];
@@ -13,11 +14,7 @@ const toObjects = (res) => {
   });
 };
 
-const genGirviNumber = (db, uid) => {
-  const yr = new Date().getFullYear();
-  const last = db.exec('SELECT COUNT(*) as c FROM girvi_records WHERE user_id=?', [uid])[0]?.values[0][0] || 0;
-  return `GRV-${yr}-${String(Number(last) + 1).padStart(4, '0')}`;
-};
+const genGirviNumber = () => nextSequentialNumber('girvi_records', 'girvi_number', 'GRV');
 
 router.get('/summary/overdue', (req, res) => {
   const uid = tenantId(req);
@@ -71,7 +68,7 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'Required fields missing' });
   }
   try {
-    const girvi_number = genGirviNumber(db, uid);
+    const girvi_number = genGirviNumber();
     db.run(`INSERT INTO girvi_records 
       (user_id, girvi_number, customer_name, customer_phone, customer_address, customer_id_proof,
        item_description, item_type, metal, purity, gross_weight, net_weight, stone_weight,

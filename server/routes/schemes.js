@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDatabase, saveDatabase } = require('../db/database');
 const { tenantId } = require('../db/tenant');
+const { nextSequentialNumber } = require('../db/documentNumbers');
 
 const toObjects = (res) => {
   if (!res || res.length === 0) return [];
@@ -49,9 +50,7 @@ router.post('/enrollments', (req, res) => {
     const plan = toObjects(db.exec('SELECT * FROM scheme_plans WHERE id=? AND user_id=?', [plan_id, uid]))[0];
     if (!plan) return res.status(400).json({ error: 'Plan not found' });
 
-    const yr = new Date().getFullYear();
-    const cnt = db.exec('SELECT COUNT(*) as c FROM scheme_enrollments WHERE user_id=?', [uid])[0]?.values[0][0] || 0;
-    const scheme_number = `SCH-${yr}-${String(Number(cnt) + 1).padStart(4, '0')}`;
+    const scheme_number = nextSequentialNumber('scheme_enrollments', 'scheme_number', 'SCH');
     const start = new Date(start_date);
     const end = new Date(start);
     end.setMonth(end.getMonth() + (plan.duration_months || 12));
