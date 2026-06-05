@@ -2,7 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const initSqlJs = require('sql.js');
 
-const dbPath = path.join(__dirname, 'jewel-shop.db');
+// On Render: set SQLITE_DB_PATH=/var/data/jewel-shop.db with a persistent disk mounted at /var/data
+const dbPath = process.env.SQLITE_DB_PATH || path.join(__dirname, 'jewel-shop.db');
 const schemaPath = path.join(__dirname, 'schema.sql');
 const { runTenantMigrations } = require('./tenantMigration');
 

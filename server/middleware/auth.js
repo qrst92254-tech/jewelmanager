@@ -1,4 +1,5 @@
 const { supabaseAdmin, ensureSupabaseConfigured } = require('../services/supabase');
+const { claimOrphanDataForUser } = require('../db/claimOrphanData');
 
 function requireFormOrJson(req, res, next) {
   const type = req.headers['content-type'] || '';
@@ -66,6 +67,11 @@ async function attachUser(req, accessToken) {
   }
 
   req.user = user;
+  try {
+    claimOrphanDataForUser(user.id);
+  } catch (err) {
+    console.error('Legacy data claim skipped:', err.message);
+  }
   return true;
 }
 

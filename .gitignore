@@ -4,3 +4,6 @@ dist/
 client/node_modules/
 client/dist/
 server/node_modules/
+# Live SQLite database — must NOT be overwritten on deploy; use Render persistent disk
+server/db/jewel-shop.db
+*.db-journal

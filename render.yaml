@@ -7,3 +7,9 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: SQLITE_DB_PATH
+        value: /var/data/jewel-shop.db
+    disk:
+      name: jewelshop-data
+      mountPath: /var/data
+      sizeGB: 1
