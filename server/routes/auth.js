@@ -1,6 +1,5 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const { supabaseAdmin } = require('../services/supabase');
+const { supabase } = require('../services/supabase');
 const { requireApiAuth, isAdminEmail } = require('../middleware/auth');
 const router = express.Router();
 
@@ -24,61 +23,58 @@ router.post('/signup', (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).render('login', { error: 'Email and password are required.' });
-  }
-
   try {
-    const { data: users, error } = await supabaseAdmin
+    const { email, password } = req.body;
+
+    console.log('[LOGIN] Attempt:', email);
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    const { data: users, error } = await supabase
       .from('users')
-      .select('id, email, password_hash, full_name, role')
-      .eq('email', email)
+      .select('*')
+      .eq('email', email.trim().toLowerCase())
       .limit(1);
 
-    if (error) {
-      console.error('Database error during login:', error.message);
-      return res.status(500).render('login', { error: 'Unable to sign in right now. Please try again later.' });
+    console.log('[LOGIN] DB query result:', { found: users?.length, error: error?.message });
+
+    if (error || !users || users.length === 0) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    const user = users?.[0];
-    if (!user || !user.password_hash) {
-      return res.status(401).render('login', { error: 'Invalid email or password.' });
-    }
+    const user = users[0];
+    console.log('[LOGIN] Hash prefix:', user.password_hash?.substring(0, 7));
 
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) {
-      return res.status(401).render('login', { error: 'Invalid email or password.' });
+    const bcrypt = require('bcryptjs');
+    const match = await bcrypt.compare(password, user.password_hash);
+    console.log('[LOGIN] bcrypt.compare result:', match);
+
+    if (!match) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
     req.session.userId = user.id;
-    req.session.userEmail = user.email;
     req.session.user = {
       id: user.id,
       email: user.email,
       role: user.role,
-      full_name: user.full_name,
+      full_name: user.full_name
     };
 
-    const isJson = (req.headers['content-type'] || '').includes('application/json');
     req.session.save((err) => {
       if (err) {
-        console.error('Session save error:', err);
-        return res.status(500).render('login', { error: 'Unable to create session. Please try again.' });
+        console.error('[LOGIN] Session save error:', err);
+        return res.status(500).json({ error: 'Session error.' });
       }
-      if (isJson) {
-        return res.json({
-          success: true,
-          email: user.email,
-          isAdmin: isAdminEmail(user.email),
-          user: { id: user.id, email: user.email, role: user.role, full_name: user.full_name },
-        });
-      }
-      return res.redirect('/dashboard');
+      console.log('[LOGIN] Session saved, userId:', req.session.userId);
+      return res.json({ success: true, user: { id: user.id, email: user.email, role: user.role, full_name: user.full_name } });
     });
-  } catch (error) {
-    console.error('Login error:', error);
-    return res.status(500).render('login', { error: 'Unable to sign in right now. Please try again later.' });
+
+  } catch (err) {
+    console.error('[LOGIN] Unexpected error:', err);
+    return res.status(500).json({ error: 'Server error.' });
   }
 });
 
