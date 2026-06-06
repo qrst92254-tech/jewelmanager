@@ -1,12 +1,3 @@
-export function getAuthHeaders(extra = {}) {
-  const token = localStorage.getItem('jewel_token');
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
-    ...extra,
-  };
-}
-
 export async function parseJsonResponse(res) {
   const text = await res.text();
   if (!text) return {};
@@ -19,25 +10,25 @@ export async function parseJsonResponse(res) {
 
 export async function authFetch(url, options = {}) {
   const res = await fetch(url, {
+    credentials: 'include',
     ...options,
-    headers: getAuthHeaders(options.headers),
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
   const data = await parseJsonResponse(res);
 
   if (res.status === 401) {
-    localStorage.removeItem('jewel_token');
     localStorage.removeItem('jewel_user');
     localStorage.removeItem('jewel_is_admin');
-    if (data.code === 'SESSION_INVALIDATED') {
-      alert('You have been logged out because your account was accessed on another device.');
-    }
     window.location.href = '/login';
     throw new Error(data.message || 'Session expired');
   }
 
   if (!res.ok) {
-    throw new Error(data.message || data.error || `Request failed (${res.status})`);
+    throw new Error(data.error || data.message || `Request failed (${res.status})`);
   }
 
   return data;

@@ -87,6 +87,7 @@ const useStore = create(devtools((set, get) => ({
         const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ email, password }),
         });
         const data = await response.json();
@@ -101,7 +102,7 @@ const useStore = create(devtools((set, get) => ({
 
     logout: async () => {
         try {
-            await fetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+            await fetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include' });
         } catch {
             /* ignore */
         }

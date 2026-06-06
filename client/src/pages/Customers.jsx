@@ -41,14 +41,8 @@ const Customers = () => {
     const fetchCustomers = async (query = '') => {
         setLoading(true);
         try {
-            const token = localStorage.getItem('jewel_token');
             const url = query ? `${API_URL}/api/customers?q=${encodeURIComponent(query)}` : `${API_URL}/api/customers`;
-            const response = await fetch(url, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
+            const response = await fetch(url, { credentials: 'include', headers: { 'Content-Type': 'application/json' } });
             if (!response.ok) throw new Error('Failed to fetch customers');
             const data = await response.json();
             setCustomers(data);
@@ -63,13 +57,7 @@ const Customers = () => {
         setSalesLoading(true);
         setSalesError(null);
         try {
-            const token = localStorage.getItem('jewel_token');
-            const response = await fetch(`${API_URL}/api/customers/${customerId}/purchases`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
+            const response = await fetch(`${API_URL}/api/customers/${customerId}/purchases`, { credentials: 'include', headers: { 'Content-Type': 'application/json' } });
             if (!response.ok) throw new Error('Failed to fetch purchase history');
             const data = await response.json();
             setCustomerSales(data);
@@ -84,13 +72,7 @@ const Customers = () => {
         setSummaryLoading(true);
         setSummaryError(null);
         try {
-            const token = localStorage.getItem('jewel_token');
-            const response = await fetch(`${API_URL}/api/customers/${customerId}/summary`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
+            const response = await fetch(`${API_URL}/api/customers/${customerId}/summary`, { credentials: 'include', headers: { 'Content-Type': 'application/json' } });
             if (!response.ok) throw new Error('Failed to fetch customer summary');
             const data = await response.json();
             setCustomerSummary(data);
@@ -151,15 +133,12 @@ const Customers = () => {
     const handleSaveCustomer = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('jewel_token');
             const method = isEditMode ? 'PUT' : 'POST';
             const url = isEditMode ? `${API_URL}/api/customers/${formData.id}` : `${API_URL}/api/customers`;
             const response = await fetch(url, {
                 method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
             });
 
@@ -171,13 +150,7 @@ const Customers = () => {
             setIsModalOpen(false);
             fetchCustomers(searchTerm);
             if (selectedCustomer && selectedCustomer.id === formData.id) {
-                // Refresh details
-                const updatedCustomer = await fetch(`${API_URL}/api/customers/${formData.id}`, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(token && { 'Authorization': `Bearer ${token}` })
-                    }
-                }).then(r => r.json());
+                const updatedCustomer = await fetch(`${API_URL}/api/customers/${formData.id}`, { credentials: 'include', headers: { 'Content-Type': 'application/json' } }).then(r => r.json());
                 setSelectedCustomer(updatedCustomer);
                 fetchCustomerSummary(formData.id);
             }
@@ -189,13 +162,10 @@ const Customers = () => {
     const handleDeleteCustomer = async (id) => {
         if (window.confirm('Are you sure you want to delete this customer?')) {
             try {
-                const token = localStorage.getItem('jewel_token');
                 const response = await fetch(`${API_URL}/api/customers/${id}`, {
                     method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(token && { 'Authorization': `Bearer ${token}` })
-                    }
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
                 });
                 if (!response.ok) throw new Error('Failed to delete customer');
                 fetchCustomers(searchTerm);
@@ -209,13 +179,10 @@ const Customers = () => {
     const handleUpdateLoyalty = async (delta) => {
         if (!selectedCustomer) return;
         try {
-            const token = localStorage.getItem('jewel_token');
             const response = await fetch(`${API_URL}/api/customers/${selectedCustomer.id}/loyalty`, {
                 method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ delta })
             });
             if (!response.ok) throw new Error('Failed to update loyalty points');
