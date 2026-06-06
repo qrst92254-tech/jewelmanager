@@ -1,5 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const router = express.Router();
 const { supabaseAdmin } = require('../services/supabase');
 const { requireApiAuth, requireAdminApi } = require('../middleware/auth');
@@ -26,34 +27,27 @@ router.post('/create-user', requireApiAuth, requireAdminApi, async (req, res) =>
   }
 
   try {
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-    });
+    const password_hash = await bcrypt.hash(password, 10);
+    const userId = crypto.randomUUID();
 
-    if (authError) {
-      const msg = authError.message || 'Failed to create user';
-      if (msg.toLowerCase().includes('already')) {
-        return res.status(400).json({ message: 'A user with this email already exists' });
-      }
-      return res.status(400).json({ message: msg });
-    }
-
-    const userId = authData.user.id;
-
-    const { error: profileError } = await supabaseAdmin.from('users').upsert({
+    const { error: profileError } = await supabaseAdmin.from('users').insert({
       id: userId,
       email,
+      password_hash,
       full_name: name,
       phone,
       city,
       role: 'shopowner',
       created_at: new Date().toISOString(),
-    }, { onConflict: 'id' });
+    });
 
     if (profileError) {
+      const msg = profileError.message || 'Failed to create user';
+      if (msg.toLowerCase().includes('duplicate') || msg.toLowerCase().includes('already')) {
+        return res.status(400).json({ message: 'A user with this email already exists' });
+      }
       console.error('Profile insert error:', profileError);
+      return res.status(400).json({ message: msg });
     }
 
     const trialEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -81,14 +75,18 @@ router.post('/create-user', requireApiAuth, requireAdminApi, async (req, res) =>
 
 router.get('/users', requireApiAuth, requireAdminApi, async (req, res) => {
   try {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+    const { data, error } = await supabaseAdmin
+      .from('users')
+      .select('id, email, full_name, created_at')
+      .order('created_at', { ascending: false });
+
     if (error) return res.status(500).json({ message: error.message });
 
-    const users = (data.users || []).map((u) => ({
+    const users = (data || []).map((u) => ({
       id: u.id,
       email: u.email,
+      fullName: u.full_name,
       createdAt: u.created_at,
-      lastSignIn: u.last_sign_in_at,
     }));
 
     return res.json({ users });
@@ -100,8 +98,6 @@ router.get('/users', requireApiAuth, requireAdminApi, async (req, res) => {
 router.delete('/users/:userId', requireApiAuth, requireAdminApi, async (req, res) => {
   const { userId } = req.params;
   try {
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
-    if (error) return res.status(400).json({ message: error.message });
     await supabaseAdmin.from('active_sessions').delete().eq('user_id', userId);
     await supabaseAdmin.from('subscriptions').delete().eq('user_id', userId);
     await supabaseAdmin.from('users').delete().eq('id', userId);

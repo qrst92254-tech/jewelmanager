@@ -57,21 +57,20 @@ function gramsFromTroyOunce(pricePerOunce) {
   return pricePerOunce / TROY_OUNCE_TO_GRAM;
 }
 
-function saveToCache(prices, metalName = 'XAU') {
+async function saveToCache(prices, metalName = 'XAU') {
   if (!metalName || metalName === undefined) {
     console.log('Skipping price cache: metal name is missing');
     return;
   }
   try {
-    supabaseAdmin.from('price_cache').insert({
+    const { error } = await supabaseAdmin.from('price_cache').insert({
       metal: metalName,
       currency: 'INR',
       prices: JSON.stringify(prices),
       price: 0,
       source: prices.source
-    }).then(({ error }) => {
-      if (error) console.error('Error caching price to Supabase:', error.message);
     });
+    if (error) console.error('Error caching price to Supabase:', error.message);
   } catch (error) {
     console.error('Error caching price to database:', error.message);
   }
@@ -254,10 +253,10 @@ async function scrapeRates() {
 async function getLivePrices() {
   try {
     const prices = await scrapeRates();
-    saveToCache(prices);
+    await saveToCache(prices);
     return prices;
   } catch (error) {
-    console.error('❌ Price service failed:', error.message);
+    console.error('Price service failed:', error.message);
     const cached = await getLastCachedPrice();
     if (cached) {
       return applyDerivedRates({ ...cached, source: 'db_cache', is_fallback: true });

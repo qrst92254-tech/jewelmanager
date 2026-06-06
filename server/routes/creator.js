@@ -56,7 +56,6 @@ router.post('/creator/delete-user', requireFormOrJson, requireAuth, requireCreat
   }
 
   try {
-    await supabaseAdmin.auth.admin.deleteUser(userId);
     await supabaseAdmin.from('subscriptions').delete().eq('user_id', userId);
     await supabaseAdmin.from('users').delete().eq('id', userId);
     return res.json({ success: true });

@@ -1,6 +1,5 @@
-/** @returns {string} Supabase auth user UUID from req.user */
 function tenantId(req) {
-  const id = req.user?.id;
+  const id = req.session?.userId || req.user?.id;
   if (!id) {
     throw new Error('Tenant context missing');
   }

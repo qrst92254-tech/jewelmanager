@@ -5,12 +5,10 @@ const { tenantId } = require('../db/tenant');
 const { supabase } = require('../services/supabase');
 
 // Helper function to generate next sequential number
-async function nextSequentialNumber(table, column, prefix) {
-  const { data, error } = await supabase
-    .from(table)
-    .select(column)
-    .order(column, { ascending: false })
-    .limit(1);
+async function nextSequentialNumber(table, column, prefix, uid) {
+  let query = supabase.from(table).select(column);
+  if (uid) query = query.eq('user_id', uid);
+  const { data, error } = await query.order(column, { ascending: false }).limit(1);
   
   if (error || !data || data.length === 0) {
     return `${prefix}-0001`;
@@ -79,7 +77,7 @@ router.post('/enrollments', async (req, res) => {
     const plan = await queryOne('scheme_plans', { eq: { id: plan_id } }, uid);
     if (!plan) return res.status(400).json({ error: 'Plan not found' });
 
-    const scheme_number = await nextSequentialNumber('scheme_enrollments', 'scheme_number', 'SCH');
+    const scheme_number = await nextSequentialNumber('scheme_enrollments', 'scheme_number', 'SCH', uid);
     const start = new Date(start_date);
     const end = new Date(start);
     end.setMonth(end.getMonth() + (plan.duration_months || 12));
@@ -102,15 +100,8 @@ router.post('/enrollments/:id/payments', async (req, res) => {
     if (!enrollment) return res.status(404).json({ error: 'Enrollment not found' });
 
     const month_number = (enrollment.months_paid || 0) + 1;
-    const yr = new Date().getFullYear();
-
-    // Get payment count for receipt number
-    const { data: countData, error: countError } = await supabase
-      .from('scheme_payments')
-      .select('id', { count: 'exact', head: true });
-
-    const cnt = countData || 0;
-    const receipt_number = `RCP-${yr}-${String(Number(cnt) + 1).padStart(4, '0')}`;
+    const scheme_number = enrollment.scheme_number || 'SCH';
+    const receipt_number = `RCP-${scheme_number}-${String(month_number).padStart(3, '0')}`;
 
     const paymentData = {
       enrollment_id: parseInt(req.params.id),

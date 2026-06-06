@@ -1,12 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const { supabase } = require('../services/supabase');
+const { tenantId } = require('../db/tenant');
 
 router.get('/', async (req, res) => {
   try {
+    const uid = tenantId(req);
     const { data, error } = await supabase
       .from('shop_settings')
-      .select('key, value');
+      .select('key, value')
+      .eq('user_id', uid);
 
     if (error) {
       console.error('Error fetching settings:', error.message);
@@ -20,16 +23,18 @@ router.get('/', async (req, res) => {
 });
 
 router.put('/:key', async (req, res) => {
-  const { value } = req.body;
   try {
+    const uid = tenantId(req);
+    const { value } = req.body;
     const { error } = await supabase
       .from('shop_settings')
-      .upsert({ 
-        key: req.params.key, 
+      .upsert({
+        key: req.params.key,
         value,
+        user_id: uid,
         updated_at: new Date().toISOString()
-      }, { 
-        onConflict: 'key' 
+      }, {
+        onConflict: 'key'
       });
 
     if (error) throw error;
@@ -38,18 +43,20 @@ router.put('/:key', async (req, res) => {
 });
 
 router.post('/batch', async (req, res) => {
-  const { settings } = req.body;
   try {
+    const uid = tenantId(req);
+    const { settings } = req.body;
     const settingsToUpsert = Object.entries(settings || {}).map(([key, value]) => ({
       key,
       value,
+      user_id: uid,
       updated_at: new Date().toISOString()
     }));
 
     const { error } = await supabase
       .from('shop_settings')
-      .upsert(settingsToUpsert, { 
-        onConflict: 'key' 
+      .upsert(settingsToUpsert, {
+        onConflict: 'key'
       });
 
     if (error) throw error;

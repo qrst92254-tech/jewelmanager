@@ -306,7 +306,9 @@ function isMultiTenantTable(table) {
         'suppliers',
         'purchase_orders',
         'expenses',
-        'staff_users'
+        'staff_users',
+        'ledger_entries',
+        'shop_settings'
     ];
     return multiTenantTables.includes(table);
 }

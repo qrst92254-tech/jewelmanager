@@ -5,10 +5,11 @@ const { tenantId } = require('../db/tenant');
 const { supabase } = require('../services/supabase');
 
 // Helper function to generate next bill number
-async function nextSaleBillNumber() {
+async function nextSaleBillNumber(uid) {
     const { data, error } = await supabase
         .from('sales')
         .select('bill_number')
+        .eq('user_id', uid)
         .order('bill_number', { ascending: false })
         .limit(1);
     
@@ -102,7 +103,7 @@ router.post('/', async (req, res) => {
         const sgst_amount = final_amount_before_gst * (sgst_rate / 100);
         const final_amount = final_amount_before_gst + cgst_amount + sgst_amount;
 
-        const bill_number = await nextSaleBillNumber();
+        const bill_number = await nextSaleBillNumber(uid);
 
         // Insert sale
         const saleData = {

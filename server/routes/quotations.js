@@ -5,12 +5,10 @@ const { tenantId } = require('../db/tenant');
 const { supabase } = require('../services/supabase');
 
 // Helper function to generate next sequential number
-async function nextSequentialNumber(table, column, prefix) {
-  const { data, error } = await supabase
-    .from(table)
-    .select(column)
-    .order(column, { ascending: false })
-    .limit(1);
+async function nextSequentialNumber(table, column, prefix, uid) {
+  let query = supabase.from(table).select(column);
+  if (uid) query = query.eq('user_id', uid);
+  const { data, error } = await query.order(column, { ascending: false }).limit(1);
   
   if (error || !data || data.length === 0) {
     return `${prefix}-0001`;
@@ -56,7 +54,7 @@ router.post('/', async (req, res) => {
   const { customer_name, customer_phone, gold_rate_used, silver_rate_used, valid_until,
     subtotal, gst_amount, grand_total, notes, items } = req.body;
   try {
-    const quotation_number = await nextSequentialNumber('quotations', 'quotation_number', 'QUO');
+    const quotation_number = await nextSequentialNumber('quotations', 'quotation_number', 'QUO', uid);
     const quotationData = {
       quotation_number, customer_name, customer_phone, gold_rate_used, silver_rate_used, valid_until,
       subtotal, gst_amount, grand_total, notes

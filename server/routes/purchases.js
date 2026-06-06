@@ -5,12 +5,10 @@ const { tenantId } = require('../db/tenant');
 const { supabase } = require('../services/supabase');
 
 // Helper function to generate next sequential number
-async function nextSequentialNumber(table, column, prefix) {
-  const { data, error } = await supabase
-    .from(table)
-    .select(column)
-    .order(column, { ascending: false })
-    .limit(1);
+async function nextSequentialNumber(table, column, prefix, uid) {
+  let query = supabase.from(table).select(column);
+  if (uid) query = query.eq('user_id', uid);
+  const { data, error } = await query.order(column, { ascending: false }).limit(1);
   
   if (error || !data || data.length === 0) {
     return `${prefix}-0001`;
@@ -126,7 +124,7 @@ router.post('/orders', async (req, res) => {
     const supplier = await queryOne('suppliers', { eq: { id: supplier_id } }, uid);
     if (!supplier) return res.status(400).json({ error: 'Supplier not found' });
 
-    const po_number = await nextSequentialNumber('purchase_orders', 'po_number', 'PO');
+    const po_number = await nextSequentialNumber('purchase_orders', 'po_number', 'PO', uid);
     const orderData = {
       po_number, supplier_id, order_date, expected_date, subtotal, gst_amount, grand_total,
       amount_paid, payment_method, notes

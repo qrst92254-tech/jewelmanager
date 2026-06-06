@@ -5,12 +5,10 @@ const { tenantId } = require('../db/tenant');
 const { supabase } = require('../services/supabase');
 
 // Helper function to generate next sequential number
-async function nextSequentialNumber(table, column, prefix) {
-  const { data, error } = await supabase
-    .from(table)
-    .select(column)
-    .order(column, { ascending: false })
-    .limit(1);
+async function nextSequentialNumber(table, column, prefix, uid) {
+  let query = supabase.from(table).select(column);
+  if (uid) query = query.eq('user_id', uid);
+  const { data, error } = await query.order(column, { ascending: false }).limit(1);
   
   if (error || !data || data.length === 0) {
     return `${prefix}-0001`;
@@ -169,7 +167,7 @@ router.post('/job-cards', async (req, res) => {
     const karigar = await queryOne('karigars', { eq: { id: karigar_id } }, uid);
     if (!karigar) return res.status(404).json({ error: 'Karigar not found' });
 
-    const job_card_number = await nextSequentialNumber('karigar_job_cards', 'job_card_number', 'JOB');
+    const job_card_number = await nextSequentialNumber('karigar_job_cards', 'job_card_number', 'JOB', uid);
 
     const jobCardData = {
       karigar_id, job_card_number, product_description, category, purity,

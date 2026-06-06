@@ -7,7 +7,7 @@
     "dev": "vite --config client/vite.config.js",
     "build": "vite build --config client/vite.config.js",
     "preview": "vite preview --config client/vite.config.js",
-    "start": "node server/index.js",
+    "start": "node --max-old-space-size=400 server/index.js",
     "server": "node server/index.js",
     "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
     "postinstall": "npm run build"
@@ -23,6 +23,8 @@
     "cheerio": "^1.2.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "express-session": "^1.18.1",
+    "bcryptjs": "^2.4.3",
     "node-fetch": "^3.3.2"
   },
   "devDependencies": {

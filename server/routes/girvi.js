@@ -5,10 +5,11 @@ const { tenantId } = require('../db/tenant');
 const { supabase } = require('../services/supabase');
 
 // Helper function to generate next girvi number
-async function genGirviNumber() {
+async function genGirviNumber(uid) {
   const { data, error } = await supabase
     .from('girvi_records')
     .select('girvi_number')
+    .eq('user_id', uid)
     .order('girvi_number', { ascending: false })
     .limit(1);
   
@@ -97,7 +98,7 @@ router.post('/', async (req, res) => {
   }
   
   try {
-    const girvi_number = await genGirviNumber();
+    const girvi_number = await genGirviNumber(uid);
     const girviData = {
       customer_name, customer_phone, customer_address, customer_id_proof,
       item_description, item_type, metal, purity, gross_weight, net_weight, stone_weight,
