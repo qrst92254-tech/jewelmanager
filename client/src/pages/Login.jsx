@@ -1,27 +1,33 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import useStore from '../store/useStore';
 import { LogIn } from 'lucide-react';
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const login = useStore(state => state.login);
-    const navigate = useNavigate();
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError(null);
-        setIsLoading(true);
+        setError('');
+        setLoading(true);
         try {
-            await login(email, password);
-            navigate('/dashboard');
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.href = '/dashboard';
+            } else {
+                setError(data.error || 'Login failed');
+            }
         } catch (err) {
-            setError(err.message);
+            setError('Network error. Please try again.');
         } finally {
-            setIsLoading(false);
+            setLoading(false);
         }
     };
 
@@ -137,11 +143,11 @@ const Login = () => {
                         <button 
                             type="submit" 
                             className="btn-primary" 
-                            style={{ width: '100%', marginTop: '0.5rem', opacity: isLoading ? 0.7 : 1 }}
-                            disabled={isLoading}
+                            style={{ width: '100%', marginTop: '0.5rem', opacity: loading ? 0.7 : 1 }}
+                            disabled={loading}
                         >
                             <LogIn size={18} style={{ marginRight: '8px' }} />
-                            {isLoading ? 'Signing In...' : 'Sign In'}
+                            {loading ? 'Signing In...' : 'Sign In'}
                         </button>
                     </form>
 
