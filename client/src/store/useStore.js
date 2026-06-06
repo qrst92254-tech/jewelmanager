@@ -32,10 +32,11 @@ const useStore = create(devtools((set, get) => ({
 
     // Auth State
     auth: {
-        isAuthenticated: true,
+        isAuthenticated: false,
         user: null,
         token: null,
         isAdmin: false,
+        loading: true,
     },
 
     // Price Actions
@@ -65,6 +66,23 @@ const useStore = create(devtools((set, get) => ({
     },
 
     // Auth Actions
+    checkAuth: async () => {
+        try {
+            const res = await fetch('/api/auth/me', { credentials: 'include' });
+            if (res.ok) {
+                const data = await res.json();
+                const user = data.user;
+                if (user) {
+                    localStorage.setItem('jewel_user', user.email);
+                    localStorage.setItem('jewel_is_admin', user.role === 'admin' ? 'true' : 'false');
+                    set({ auth: { isAuthenticated: true, user: user.email, token: null, isAdmin: user.role === 'admin', loading: false } });
+                    return;
+                }
+            }
+        } catch { /* ignore */ }
+        set({ auth: { isAuthenticated: false, user: null, token: null, isAdmin: false, loading: false } });
+    },
+
     login: async (email, password) => {
         const response = await fetch('/api/auth/login', {
             method: 'POST',
@@ -78,7 +96,7 @@ const useStore = create(devtools((set, get) => ({
         const user = data.user;
         localStorage.setItem('jewel_user', user.email);
         localStorage.setItem('jewel_is_admin', user.role === 'admin' ? 'true' : 'false');
-        set({ auth: { isAuthenticated: true, user: user.email, token: null, isAdmin: user.role === 'admin' } });
+        set({ auth: { isAuthenticated: true, user: user.email, token: null, isAdmin: user.role === 'admin', loading: false } });
     },
 
     logout: async () => {
@@ -89,7 +107,7 @@ const useStore = create(devtools((set, get) => ({
         }
         localStorage.removeItem('jewel_user');
         localStorage.removeItem('jewel_is_admin');
-        set({ auth: { isAuthenticated: false, user: null, token: null, isAdmin: false } });
+        set({ auth: { isAuthenticated: false, user: null, token: null, isAdmin: false, loading: false } });
     },
 })));
 

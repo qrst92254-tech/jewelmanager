@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import useStore from './store/useStore';
 
@@ -28,6 +28,24 @@ import Login from './pages/Login';
 
 function App() {
     const isAuthenticated = useStore(state => state.auth.isAuthenticated);
+    const authLoading = useStore(state => state.auth.loading);
+    const checkAuth = useStore(state => state.checkAuth);
+
+    useEffect(() => {
+        checkAuth();
+    }, []);
+
+    if (authLoading) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg)' }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '1rem', animation: 'spin 1s linear infinite' }}>⟳</div>
+                    <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
+                </div>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+        );
+    }
 
     return (
         <Router>
