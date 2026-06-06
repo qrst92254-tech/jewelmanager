@@ -32,10 +32,10 @@ const useStore = create(devtools((set, get) => ({
 
     // Auth State
     auth: {
-        isAuthenticated: !!localStorage.getItem('jewel_token'),
-        user: localStorage.getItem('jewel_user') || null,
-        token: localStorage.getItem('jewel_token') || null,
-        isAdmin: localStorage.getItem('jewel_is_admin') === 'true',
+        isAuthenticated: true,
+        user: null,
+        token: null,
+        isAdmin: false,
     },
 
     // Price Actions
@@ -43,11 +43,9 @@ const useStore = create(devtools((set, get) => ({
         set(state => ({ livePrices: { ...state.livePrices, loading: true } }));
         try {
             // Use relative paths: in dev, Vite proxy handles /api/* → localhost:3001
-            const token = localStorage.getItem('jewel_token');
             const response = await fetch('/api/prices/live', {
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
                 }
             });
             if (!response.ok) throw new Error('Failed to fetch prices');
@@ -68,43 +66,27 @@ const useStore = create(devtools((set, get) => ({
 
     // Auth Actions
     login: async (email, password) => {
-        // Use relative paths: in dev, Vite proxy handles /api/* → localhost:3001
         const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),
         });
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.message || err.error || 'Login failed');
-        }
         const data = await response.json();
-        if (data.success) {
-            localStorage.setItem('jewel_token', data.token);
-            localStorage.setItem('jewel_user', data.email);
-            localStorage.setItem('jewel_is_admin', data.isAdmin ? 'true' : 'false');
-            set({ auth: { isAuthenticated: true, user: data.email, token: data.token, isAdmin: !!data.isAdmin } });
-        } else {
-            throw new Error(data.message || 'Login failed');
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || data.message || 'Login failed');
         }
+        const user = data.user;
+        localStorage.setItem('jewel_user', user.email);
+        localStorage.setItem('jewel_is_admin', user.role === 'admin' ? 'true' : 'false');
+        set({ auth: { isAuthenticated: true, user: user.email, token: null, isAdmin: user.role === 'admin' } });
     },
 
     logout: async () => {
-        const token = localStorage.getItem('jewel_token');
         try {
-            if (token) {
-                await fetch('/api/auth/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
-            }
+            await fetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
         } catch {
             /* ignore */
         }
-        localStorage.removeItem('jewel_token');
         localStorage.removeItem('jewel_user');
         localStorage.removeItem('jewel_is_admin');
         set({ auth: { isAuthenticated: false, user: null, token: null, isAdmin: false } });

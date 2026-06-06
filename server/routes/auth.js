@@ -79,11 +79,7 @@ router.post('/login', async (req, res) => {
 });
 
 router.get('/me', requireApiAuth, (req, res) => {
-  res.json({
-    id: req.user.id,
-    email: req.user.email,
-    isAdmin: isAdminEmail(req.user.email),
-  });
+  res.json({ user: req.session.user });
 });
 
 router.get('/dashboard-stats', requireApiAuth, async (req, res) => {

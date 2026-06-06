@@ -10,10 +10,13 @@ const ProtectedRoute = () => {
     useEffect(() => {
         if (!isAuthenticated) return;
         authFetch('/api/auth/me')
-            .then((me) => {
-                localStorage.setItem('jewel_is_admin', me.isAdmin ? 'true' : 'false');
+            .then((data) => {
+                const user = data.user;
+                if (!user) return;
+                localStorage.setItem('jewel_user', user.email);
+                localStorage.setItem('jewel_is_admin', user.role === 'admin' ? 'true' : 'false');
                 setAuth((state) => ({
-                    auth: { ...state.auth, user: me.email, isAdmin: !!me.isAdmin },
+                    auth: { ...state.auth, user: user.email, isAdmin: user.role === 'admin' },
                 }));
             })
             .catch(() => { /* ignore — login redirect handled by authFetch */ });
