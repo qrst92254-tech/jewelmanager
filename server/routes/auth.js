@@ -8,7 +8,7 @@ router.get('/signup', (req, res) => {
 });
 
 router.get('/login', (req, res) => {
-  return res.render('login', { error: null });
+  return res.redirect('/login');
 });
 
 router.post('/signup', (req, res) => {

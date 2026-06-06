@@ -99,7 +99,7 @@ app.get('/health', (req, res) => {
 app.use(express.static(path.join(__dirname, '../dist')));
 
 app.get('*', (req, res) => {
-  if (req.path === '/signup' || req.path === '/login' || req.path === '/pricing' || req.path === '/creator') {
+  if (req.path === '/pricing' || req.path === '/creator') {
     return res.render(req.path.replace('/', ''), { error: null });
   }
   res.sendFile(path.join(__dirname, '../dist/index.html'));
