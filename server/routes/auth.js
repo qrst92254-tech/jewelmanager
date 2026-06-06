@@ -43,27 +43,39 @@ router.post('/login', async (req, res) => {
 
     const user = users?.[0];
     if (!user || !user.password_hash) {
-      return res.status(401).render('login', { error: 'Incorrect email or password. Please try again.' });
+      return res.status(401).render('login', { error: 'Invalid email or password.' });
     }
 
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
-      return res.status(401).render('login', { error: 'Incorrect email or password. Please try again.' });
+      return res.status(401).render('login', { error: 'Invalid email or password.' });
     }
 
     req.session.userId = user.id;
     req.session.userEmail = user.email;
+    req.session.user = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      full_name: user.full_name,
+    };
 
     const isJson = (req.headers['content-type'] || '').includes('application/json');
-    if (isJson) {
-      return res.json({
-        success: true,
-        email: user.email,
-        isAdmin: isAdminEmail(user.email),
-        user: { id: user.id, email: user.email },
-      });
-    }
-    return res.redirect('/dashboard');
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+        return res.status(500).render('login', { error: 'Unable to create session. Please try again.' });
+      }
+      if (isJson) {
+        return res.json({
+          success: true,
+          email: user.email,
+          isAdmin: isAdminEmail(user.email),
+          user: { id: user.id, email: user.email, role: user.role, full_name: user.full_name },
+        });
+      }
+      return res.redirect('/dashboard');
+    });
   } catch (error) {
     console.error('Login error:', error);
     return res.status(500).render('login', { error: 'Unable to sign in right now. Please try again later.' });
@@ -132,7 +144,11 @@ router.post('/logout', async (req, res) => {
       console.error('Logout error:', err.message);
     }
     res.clearCookie('connect.sid');
-    return res.json({ success: true });
+    const isJson = (req.headers['content-type'] || '').includes('application/json');
+    if (isJson) {
+      return res.json({ success: true });
+    }
+    return res.redirect('/login');
   });
 });
 

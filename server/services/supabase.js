@@ -1,8 +1,8 @@
 const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.SUPABASE_URL || null;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || null;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || null;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || null;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || null;
 
 let supabase = null;
 let supabaseAdmin = null;
@@ -29,9 +29,17 @@ if (supabaseUrl && supabaseServiceRoleKey) {
   }
 }
 
+if (!supabase) {
+  console.error('Supabase client not initialized. Check SUPABASE_URL and SUPABASE_ANON_KEY/SUPABASE_KEY environment variables.');
+}
+
+if (!supabaseAdmin) {
+  console.error('Supabase admin client not initialized. Check SUPABASE_SERVICE_ROLE_KEY or SUPABASE_KEY environment variable.');
+}
+
 function ensureSupabaseConfigured() {
   if (!supabase || !supabaseAdmin) {
-    throw new Error('Missing Supabase env vars. Ensure SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY are set.');
+    throw new Error('Missing Supabase env vars. Ensure SUPABASE_URL, SUPABASE_ANON_KEY (or SUPABASE_KEY), and SUPABASE_SERVICE_ROLE_KEY are set.');
   }
 }
 

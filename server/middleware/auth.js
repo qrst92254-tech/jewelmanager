@@ -16,7 +16,7 @@ function requireAuth(req, res, next) {
   if (!req.session.userId) {
     return res.redirect('/login');
   }
-  req.user = { id: req.session.userId, email: req.session.userEmail };
+  req.user = req.session.user || { id: req.session.userId, email: req.session.userEmail };
   next();
 }
 
@@ -24,7 +24,7 @@ function requireApiAuth(req, res, next) {
   if (!req.session.userId) {
     return res.status(401).json({ message: 'Invalid or expired token' });
   }
-  req.user = { id: req.session.userId, email: req.session.userEmail };
+  req.user = req.session.user || { id: req.session.userId, email: req.session.userEmail };
   next();
 }
 
