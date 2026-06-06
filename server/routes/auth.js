@@ -1,6 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { supabaseAdmin } = require('../services/supabase');
+const { supabase, supabaseAdmin } = require('../services/supabase');
 const { requireApiAuth, isAdminEmail } = require('../middleware/auth');
 const router = express.Router();
 
@@ -21,6 +21,30 @@ router.post('/signup', (req, res) => {
     return res.status(403).json(payload);
   }
   return res.status(403).render('signup', { error: payload.message });
+});
+
+router.get('/debug-login', async (req, res) => {
+  try {
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, email, role, password_hash')
+      .eq('email', 'safernot4@gmail.com')
+      .limit(1);
+
+    const user = users?.[0];
+    const bcrypt = require('bcrypt');
+    const testMatch = user ? await bcrypt.compare('123456789', user.password_hash) : false;
+
+    res.json({
+      found: !!user,
+      email: user?.email,
+      hashPrefix: user?.password_hash?.substring(0, 7),
+      bcryptMatch: testMatch,
+      error: error?.message
+    });
+  } catch(e) {
+    res.json({ error: e.message });
+  }
 });
 
 router.post('/login', async (req, res) => {
