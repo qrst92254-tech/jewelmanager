@@ -105,6 +105,7 @@ router.post('/enrollments/:id/payments', async (req, res) => {
 
     const paymentData = {
       enrollment_id: parseInt(req.params.id),
+      user_id: uid,
       payment_date, month_number, amount_paid, payment_method, receipt_number
     };
 
@@ -125,6 +126,7 @@ router.post('/enrollments/:id/payments', async (req, res) => {
       .from('scheme_plans')
       .select('duration_months')
       .eq('id', enrollment.plan_id)
+      .eq('user_id', uid)
       .single();
 
     if (planData && (enrollment.months_paid + 1) >= planData.duration_months) {

@@ -134,6 +134,7 @@ router.post('/transactions', async (req, res) => {
     if (!karigar) return res.status(404).json({ error: 'Karigar not found' });
 
     const transactionData = {
+      user_id: uid,
       karigar_id, transaction_type, metal, gross_weight, fine_weight, purity,
       making_charges, wastage_percent, wastage_grams, order_description, expected_date, notes
     };
@@ -170,6 +171,7 @@ router.post('/job-cards', async (req, res) => {
     const job_card_number = await nextSequentialNumber('karigar_job_cards', 'job_card_number', 'JOB', uid);
 
     const jobCardData = {
+      user_id: uid,
       karigar_id, job_card_number, product_description, category, purity,
       gold_issued_grams, making_charges, order_date, expected_date, notes
     };

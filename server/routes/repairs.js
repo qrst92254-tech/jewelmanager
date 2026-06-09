@@ -4,13 +4,23 @@ const { queryAll, queryOne, insert, update } = require('../db/database');
 const { tenantId } = require('../db/tenant');
 const { supabase } = require('../services/supabase');
 
+const parseIntOrNull = (val) => {
+  if (val === '' || val === null || val === undefined) return null;
+  const parsed = parseInt(val, 10);
+  return isNaN(parsed) ? null : parsed;
+};
+
+const parseFloatOrNull = (val) => {
+  if (val === '' || val === null || val === undefined) return null;
+  const parsed = parseFloat(val);
+  return isNaN(parsed) ? null : parsed;
+};
+
 // Helper function to generate next sequential number
-async function nextSequentialNumber(table, column, prefix) {
-  const { data, error } = await supabase
-    .from(table)
-    .select(column)
-    .order(column, { ascending: false })
-    .limit(1);
+async function nextSequentialNumber(table, column, prefix, uid) {
+  let query = supabase.from(table).select(column);
+  if (uid) query = query.eq('user_id', uid);
+  const { data, error } = await query.order(column, { ascending: false }).limit(1);
   
   if (error || !data || data.length === 0) {
     return `${prefix}-0001`;
@@ -78,11 +88,16 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'Required fields missing' });
   }
   try {
-    const job_number = await nextSequentialNumber('repair_orders', 'job_number', 'REP');
+    const job_number = await nextSequentialNumber('repair_orders', 'job_number', 'REP', uid);
     const repairData = {
-      job_number, customer_name, customer_phone, item_description, item_type, metal, purity, weight,
-      repair_type, problem_description, estimated_charges, advance_paid, received_date, promised_date,
-      assigned_to_karigar_id, notes
+      job_number, customer_name, customer_phone, item_description, item_type, metal, purity,
+      weight: parseFloatOrNull(weight),
+      repair_type, problem_description,
+      estimated_charges: parseFloatOrNull(estimated_charges),
+      advance_paid: parseFloatOrNull(advance_paid),
+      received_date, promised_date,
+      assigned_to_karigar_id: parseIntOrNull(assigned_to_karigar_id),
+      notes
     };
     const result = await insert('repair_orders', repairData, uid);
     res.status(201).json({ id: result.id, job_number: result.job_number });

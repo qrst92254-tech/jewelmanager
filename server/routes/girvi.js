@@ -135,6 +135,7 @@ router.post('/:id/payments', async (req, res) => {
 
     const paymentData = {
       girvi_id: parseInt(req.params.id),
+      user_id: uid,
       payment_date, amount_paid, interest_amount, principal_amount, payment_method, notes
     };
 

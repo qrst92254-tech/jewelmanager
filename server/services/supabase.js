@@ -7,9 +7,9 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.
 let supabase = null;
 let supabaseAdmin = null;
 
-if (supabaseUrl && supabaseAnonKey) {
+if (supabaseUrl && supabaseServiceRoleKey) {
   try {
-    supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
   } catch (err) {
