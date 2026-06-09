@@ -50,7 +50,7 @@ app.use(cookieParser());
 
 app.use(session({
   store: new pgSession({
-    conString: process.env.DATABASE_URL,
+    conString: (process.env.DATABASE_URL || '').trim(),
     tableName: 'user_sessions',
     createTableIfMissing: true,
   }),
