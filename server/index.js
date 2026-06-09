@@ -68,19 +68,43 @@ async function startServer() {
         // Resolve DATABASE_URL hostname to IPv4 to avoid ENETUNREACH on Render
         let dbUrl = (process.env.DATABASE_URL || '').trim();
         if (dbUrl) {
+            let resolved = false;
             try {
                 const parsed = new URL(dbUrl);
                 if (parsed.hostname) {
-                    const addresses = await dns.promises.resolve4(parsed.hostname);
-                    if (addresses && addresses.length > 0) {
-                        const original = parsed.hostname;
-                        parsed.hostname = addresses[0];
-                        process.env.DATABASE_URL = parsed.toString();
-                        console.log(`Resolved ${original} -> ${addresses[0]} for session store`);
+                    try {
+                        const addresses = await dns.promises.resolve4(parsed.hostname);
+                        if (addresses && addresses.length > 0) {
+                            const original = parsed.hostname;
+                            parsed.hostname = addresses[0];
+                            process.env.DATABASE_URL = parsed.toString();
+                            console.log(`Resolved ${original} -> ${addresses[0]} for session store`);
+                            resolved = true;
+                        }
+                    } catch (e) {
+                        console.log(`No IPv4 for ${parsed.hostname}, trying Supabase pooler...`);
+                    }
+
+                    if (!resolved && parsed.hostname.endsWith('.supabase.co')) {
+                        const ref = parsed.hostname.replace(/^db\./, '').replace(/\.supabase\.co$/, '');
+                        const poolerHost = ref + '.pooler.supabase.com';
+                        try {
+                            const poolerAddresses = await dns.promises.resolve4(poolerHost);
+                            if (poolerAddresses && poolerAddresses.length > 0) {
+                                parsed.hostname = poolerHost;
+                                parsed.port = '6543';
+                                parsed.search = 'pgbouncer=true';
+                                process.env.DATABASE_URL = parsed.toString();
+                                console.log(`Using Supabase pooler: ${poolerHost} (${poolerAddresses[0]})`);
+                                resolved = true;
+                            }
+                        } catch (e2) {
+                            console.warn('Supabase pooler also unreachable via IPv4:', e2.message);
+                        }
                     }
                 }
             } catch (err) {
-                console.warn('DNS IPv4 resolution failed, using default DNS:', err.message);
+                console.warn('Failed to process DATABASE_URL for IPv4 resolution:', err.message);
             }
         }
 
