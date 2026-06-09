@@ -6,6 +6,7 @@ const pgSession = require('connect-pg-simple')(session);
 const { initializeDatabase, saveDatabase } = require('./db/database');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const dns = require('dns');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -48,27 +49,6 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-app.use(session({
-  store: new pgSession({
-    conObject: {
-        connectionString: (process.env.DATABASE_URL || '').trim(),
-        family: 4,
-        ssl: { rejectUnauthorized: false },
-    },
-    tableName: 'user_sessions',
-    createTableIfMissing: true,
-  }),
-  secret: process.env.SESSION_SECRET || 'jewel-manager-session-secret-change-in-production',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  }
-}));
-
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
@@ -80,50 +60,90 @@ app.use((err, req, res, next) => {
     next(err);
 });
 
-app.use('/api/auth', authRoutes);
-app.use('/api/prices', priceRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/products', requireApiAuth, productRoutes);
-app.use('/api/sales', requireApiAuth, salesRoutes);
-app.use('/api/customers', requireApiAuth, customersRoutes);
-app.use('/api/karigar', requireApiAuth, karigarRoutes);
-app.use('/api/girvi', requireApiAuth, girviRoutes);
-app.use('/api/schemes', requireApiAuth, schemesRoutes);
-app.use('/api/repairs', requireApiAuth, repairsRoutes);
-app.use('/api/quotations', requireApiAuth, quotationsRoutes);
-app.use('/api/purchases', requireApiAuth, purchasesRoutes);
-app.use('/api/reports', requireApiAuth, reportsRoutes);
-app.use('/api/accounting', requireApiAuth, accountingRoutes);
-app.use('/api/settings', requireApiAuth, settingsRoutes);
-app.use('/', pricingRoutes);
-app.use('/', creatorRoutes);
-
-app.get('/dashboard*', checkSubscription, (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
-});
-
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
-});
-
-app.use(express.static(path.join(__dirname, '../dist')));
-
-app.get('*', (req, res) => {
-  if (req.path === '/pricing' || req.path === '/creator') {
-    return res.render(req.path.replace('/', ''), { error: null });
-  }
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
-});
-
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ error: err.message || 'Something broke!' });
-});
-
 async function startServer() {
     try {
         await initializeDatabase();
         console.log('Database initialized successfully.');
+
+        // Resolve DATABASE_URL hostname to IPv4 to avoid ENETUNREACH on Render
+        let dbUrl = (process.env.DATABASE_URL || '').trim();
+        if (dbUrl) {
+            try {
+                const parsed = new URL(dbUrl);
+                if (parsed.hostname) {
+                    const addresses = await dns.promises.resolve4(parsed.hostname);
+                    if (addresses && addresses.length > 0) {
+                        const original = parsed.hostname;
+                        parsed.hostname = addresses[0];
+                        process.env.DATABASE_URL = parsed.toString();
+                        console.log(`Resolved ${original} -> ${addresses[0]} for session store`);
+                    }
+                }
+            } catch (err) {
+                console.warn('DNS IPv4 resolution failed, using default DNS:', err.message);
+            }
+        }
+
+        app.use(session({
+          store: new pgSession({
+            conObject: {
+              connectionString: process.env.DATABASE_URL,
+              ssl: { rejectUnauthorized: false },
+            },
+            tableName: 'user_sessions',
+            createTableIfMissing: true,
+          }),
+          secret: process.env.SESSION_SECRET || 'jewel-manager-session-secret-change-in-production',
+          resave: false,
+          saveUninitialized: false,
+          cookie: {
+            secure: process.env.NODE_ENV === 'production',
+            httpOnly: true,
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+          }
+        }));
+
+        app.use('/api/auth', authRoutes);
+        app.use('/api/prices', priceRoutes);
+        app.use('/api/admin', adminRoutes);
+        app.use('/api/products', requireApiAuth, productRoutes);
+        app.use('/api/sales', requireApiAuth, salesRoutes);
+        app.use('/api/customers', requireApiAuth, customersRoutes);
+        app.use('/api/karigar', requireApiAuth, karigarRoutes);
+        app.use('/api/girvi', requireApiAuth, girviRoutes);
+        app.use('/api/schemes', requireApiAuth, schemesRoutes);
+        app.use('/api/repairs', requireApiAuth, repairsRoutes);
+        app.use('/api/quotations', requireApiAuth, quotationsRoutes);
+        app.use('/api/purchases', requireApiAuth, purchasesRoutes);
+        app.use('/api/reports', requireApiAuth, reportsRoutes);
+        app.use('/api/accounting', requireApiAuth, accountingRoutes);
+        app.use('/api/settings', requireApiAuth, settingsRoutes);
+        app.use('/', pricingRoutes);
+        app.use('/', creatorRoutes);
+
+        app.get('/dashboard*', checkSubscription, (req, res) => {
+          res.sendFile(path.join(__dirname, '../dist/index.html'));
+        });
+
+        app.get('/health', (req, res) => {
+          res.json({ status: 'ok', time: new Date().toISOString() });
+        });
+
+        app.use(express.static(path.join(__dirname, '../dist')));
+
+        app.get('*', (req, res) => {
+          if (req.path === '/pricing' || req.path === '/creator') {
+            return res.render(req.path.replace('/', ''), { error: null });
+          }
+          res.sendFile(path.join(__dirname, '../dist/index.html'));
+        });
+
+        app.use((err, req, res, next) => {
+            console.error(err.stack);
+            res.status(500).json({ error: err.message || 'Something broke!' });
+        });
+
         app.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
         });
