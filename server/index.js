@@ -72,35 +72,84 @@ async function startServer() {
             try {
                 const parsed = new URL(dbUrl);
                 if (parsed.hostname) {
+                    // Try system DNS lookup with family 4
                     try {
-                        const addresses = await dns.promises.resolve4(parsed.hostname);
-                        if (addresses && addresses.length > 0) {
+                        const { address } = await dns.promises.lookup(parsed.hostname, { family: 4 });
+                        if (address) {
                             const original = parsed.hostname;
-                            parsed.hostname = addresses[0];
+                            parsed.hostname = address;
                             process.env.DATABASE_URL = parsed.toString();
-                            console.log(`Resolved ${original} -> ${addresses[0]} for session store`);
+                            console.log(`Resolved ${original} -> ${address} for session store`);
                             resolved = true;
                         }
-                    } catch (e) {
-                        console.log(`No IPv4 for ${parsed.hostname}, trying Supabase pooler...`);
+                    } catch (_e) {
+                        console.log(`No IPv4 for ${parsed.hostname} via system DNS, trying Google DNS...`);
+                    }
+
+                    // Try Google DNS-over-HTTPS as fallback
+                    if (!resolved) {
+                        try {
+                            const https = require('https');
+                            const json = await new Promise((resolve, reject) => {
+                                https.get(`https://dns.google/resolve?name=${encodeURIComponent(parsed.hostname)}&type=A`, (res) => {
+                                    let data = '';
+                                    res.on('data', chunk => data += chunk);
+                                    res.on('end', () => {
+                                        try { resolve(JSON.parse(data)); }
+                                        catch (e) { reject(e); }
+                                    });
+                                }).on('error', reject);
+                            });
+                            if (json?.Answer?.length > 0) {
+                                const ip = json.Answer[0].data;
+                                const original = parsed.hostname;
+                                parsed.hostname = ip;
+                                process.env.DATABASE_URL = parsed.toString();
+                                console.log(`Resolved ${original} -> ${ip} via Google DNS for session store`);
+                                resolved = true;
+                            }
+                        } catch (_e) {
+                            console.log('Google DNS lookup also failed');
+                        }
+                    }
+
+                    // Try Supabase pooler formats
+                    if (!resolved && parsed.hostname.endsWith('.supabase.co')) {
+                        const ref = parsed.hostname.replace(/^db\./, '').replace(/\.supabase\.co$/, '');
+                        const poolerHosts = [
+                            ref + '-pooler.supabase.com',
+                            ref + '.pooler.supabase.com',
+                            'aws-0-us-east-1.pooler.supabase.com',
+                            'aws-0-us-east-2.pooler.supabase.com',
+                            'aws-0-eu-west-1.pooler.supabase.com',
+                            'aws-0-eu-central-1.pooler.supabase.com',
+                            'aws-0-ap-southeast-1.pooler.supabase.com',
+                        ];
+                        for (const host of poolerHosts) {
+                            try {
+                                const { address } = await dns.promises.lookup(host, { family: 4 });
+                                if (address) {
+                                    parsed.hostname = host;
+                                    parsed.port = '6543';
+                                    parsed.search = 'pgbouncer=true';
+                                    process.env.DATABASE_URL = parsed.toString();
+                                    console.log(`Using Supabase pooler: ${host} (${address})`);
+                                    resolved = true;
+                                    break;
+                                }
+                            } catch (_e) { /* try next */ }
+                        }
                     }
 
                     if (!resolved && parsed.hostname.endsWith('.supabase.co')) {
-                        const ref = parsed.hostname.replace(/^db\./, '').replace(/\.supabase\.co$/, '');
-                        const poolerHost = ref + '.pooler.supabase.com';
-                        try {
-                            const poolerAddresses = await dns.promises.resolve4(poolerHost);
-                            if (poolerAddresses && poolerAddresses.length > 0) {
-                                parsed.hostname = poolerHost;
-                                parsed.port = '6543';
-                                parsed.search = 'pgbouncer=true';
-                                process.env.DATABASE_URL = parsed.toString();
-                                console.log(`Using Supabase pooler: ${poolerHost} (${poolerAddresses[0]})`);
-                                resolved = true;
-                            }
-                        } catch (e2) {
-                            console.warn('Supabase pooler also unreachable via IPv4:', e2.message);
-                        }
+                        console.error('========================================================');
+                        console.error('FATAL: Cannot reach your Supabase database from Render.');
+                        console.error('Your database hostname resolves to IPv6 only.');
+                        console.error('');  
+                        console.error('Fix: Go to your Supabase Dashboard -> Database ->');
+                        console.error('Connection string -> Copy the "Pooler" connection string.');
+                        console.error('Then update the DATABASE_URL environment variable on Render.');
+                        console.error('========================================================');
                     }
                 }
             } catch (err) {
