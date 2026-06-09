@@ -20,11 +20,12 @@
     "server"
   ],
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "cheerio": "^1.2.0",
+    "connect-pg-simple": "^10.0.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "express-session": "^1.18.1",
-    "bcryptjs": "^2.4.3",
     "node-fetch": "^3.3.2"
   },
   "devDependencies": {
