@@ -3,6 +3,8 @@ const router = express.Router();
 const { queryAll, queryOne, insert, update, deleteRow } = require('../db/database');
 const { tenantId } = require('../db/tenant');
 
+const dateOrNull = (val) => (val === '' || val == null ? null : val);
+
 router.get('/', async (req, res) => {
   const uid = tenantId(req);
   const { q } = req.query;
@@ -161,7 +163,8 @@ router.post('/', async (req, res) => {
   if (!name) return res.status(400).json({ error: 'Name is required' });
 
   const customerData = {
-    name, phone, address, aadhaar_number, pan_number, date_of_birth, anniversary_date,
+    name, phone, address, aadhaar_number, pan_number,
+    date_of_birth: dateOrNull(date_of_birth), anniversary_date: dateOrNull(anniversary_date),
     photo_path, customer_type, loyalty_points, credit_limit, outstanding_amount,
     notes, city, gstin, email
   };
@@ -184,7 +187,8 @@ router.put('/:id', async (req, res) => {
   } = req.body;
 
   const updateData = {
-    name, phone, address, aadhaar_number, pan_number, date_of_birth, anniversary_date,
+    name, phone, address, aadhaar_number, pan_number,
+    date_of_birth: dateOrNull(date_of_birth), anniversary_date: dateOrNull(anniversary_date),
     photo_path, customer_type, loyalty_points, credit_limit, outstanding_amount,
     notes, city, gstin, email, updated_at: new Date().toISOString()
   };

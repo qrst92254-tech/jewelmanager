@@ -16,6 +16,8 @@ const parseFloatOrNull = (val) => {
   return isNaN(parsed) ? null : parsed;
 };
 
+const dateOrNull = (val) => (val === '' || val == null ? null : val);
+
 // Helper function to generate next sequential number
 async function nextSequentialNumber(table, column, prefix, uid) {
   let query = supabase.from(table).select(column);
@@ -95,7 +97,7 @@ router.post('/', async (req, res) => {
       repair_type, problem_description,
       estimated_charges: parseFloatOrNull(estimated_charges),
       advance_paid: parseFloatOrNull(advance_paid),
-      received_date, promised_date,
+      received_date: dateOrNull(received_date), promised_date: dateOrNull(promised_date),
       assigned_to_karigar_id: parseIntOrNull(assigned_to_karigar_id),
       notes
     };
@@ -109,7 +111,8 @@ router.put('/:id', async (req, res) => {
   const { status, actual_charges, advance_paid, completion_date, delivery_date, notes } = req.body;
   try {
     const updateData = {
-      status, actual_charges, advance_paid, completion_date, delivery_date, notes
+      status, actual_charges, advance_paid,
+      completion_date: dateOrNull(completion_date), delivery_date: dateOrNull(delivery_date), notes
     };
     const result = await update('repair_orders', updateData, { id: parseInt(req.params.id) }, uid);
     if (!result || result.length === 0) return res.status(404).json({ error: 'Not found' });

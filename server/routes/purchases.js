@@ -4,6 +4,8 @@ const { queryAll, queryOne, insert, update } = require('../db/database');
 const { tenantId } = require('../db/tenant');
 const { supabase } = require('../services/supabase');
 
+const dateOrNull = (val) => (val === '' || val == null ? null : val);
+
 // Helper function to generate next sequential number
 async function nextSequentialNumber(table, column, prefix, uid) {
   let query = supabase.from(table).select(column);
@@ -126,7 +128,8 @@ router.post('/orders', async (req, res) => {
 
     const po_number = await nextSequentialNumber('purchase_orders', 'po_number', 'PO', uid);
     const orderData = {
-      po_number, supplier_id, order_date, expected_date, subtotal, gst_amount, grand_total,
+      po_number, supplier_id, order_date: dateOrNull(order_date), expected_date: dateOrNull(expected_date),
+      subtotal, gst_amount, grand_total,
       amount_paid, payment_method, notes
     };
     const result = await insert('purchase_orders', orderData, uid);
@@ -169,7 +172,7 @@ router.put('/orders/:id', async (req, res) => {
   const uid = tenantId(req);
   const { status, received_date, amount_paid } = req.body;
   try {
-    const updateData = { status, received_date, amount_paid };
+    const updateData = { status, received_date: dateOrNull(received_date), amount_paid };
     const result = await update('purchase_orders', updateData, { id: parseInt(req.params.id) }, uid);
     if (!result || result.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json({ message: 'Updated' });
