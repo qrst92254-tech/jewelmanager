@@ -28,30 +28,31 @@ export function useLivePrices() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${API_URL}/api/prices/live`, {
-        headers: {
-          'Content-Type': 'application/json',
-          // Send auth token if you have login
-          ...(localStorage.getItem('jewel_token') && {
-            'Authorization': `Bearer ${localStorage.getItem('jewel_token')}` 
-          })
-        }
-      });
+      // DISABLED: goodreturns.in is blocked on Render free tier
+      // const response = await fetch(`${API_URL}/api/prices/live`, {
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     // Send auth token if you have login
+      //     ...(localStorage.getItem('jewel_token') && {
+      //       'Authorization': `Bearer ${localStorage.getItem('jewel_token')}` 
+      //     })
+      //   }
+      // });
 
-      if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
-      }
+      // if (!response.ok) {
+      //   throw new Error(`Server returned ${response.status}`);
+      // }
 
-      const result = await response.json();
+      // const result = await response.json();
 
-      // Handle both response formats: {data: {...}} or just {...}
-      const priceData = result.data || result;
+      // // Handle both response formats: {data: {...}} or just {...}
+      // const priceData = result.data || result;
 
-      // Validate the data has actual numbers before using it
-      if (priceData && priceData.gold_24k_per_gram && priceData.gold_24k_per_gram > 1000) {
-        setPrices(priceData);
-        setLastFetched(new Date());
-      }
+      // // Validate the data has actual numbers before using it
+      // if (priceData && priceData.gold_24k_per_gram && priceData.gold_24k_per_gram > 1000) {
+      //   setPrices(priceData);
+      //   setLastFetched(new Date());
+      // }
 
     } catch (err) {
       console.error('Failed to fetch live prices:', err.message);

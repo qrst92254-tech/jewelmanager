@@ -15,15 +15,16 @@ export function useMetalRates() {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`${API_URL}/api/prices/live`);
-        const json = await response.json();
+        // DISABLED: goodreturns.in is blocked on Render free tier
+        // const response = await fetch(`${API_URL}/api/prices/live`);
+        // const json = await response.json();
 
-        if (!response.ok || json.success !== true) {
-          throw new Error(json.error || 'Failed to load rates');
-        }
+        // if (!response.ok || json.success !== true) {
+        //   throw new Error(json.error || 'Failed to load rates');
+        // }
 
         if (active) {
-          setData(json.data);
+          setData({ gold: null, silver: null });
         }
       } catch (err) {
         if (active) {

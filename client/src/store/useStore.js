@@ -41,28 +41,8 @@ const useStore = create(devtools((set, get) => ({
 
     // Price Actions
     fetchPrices: async () => {
-        set(state => ({ livePrices: { ...state.livePrices, loading: true } }));
-        try {
-            // Use relative paths: in dev, Vite proxy handles /api/* → localhost:3001
-            const response = await fetch('/api/prices/live', {
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            });
-            if (!response.ok) throw new Error('Failed to fetch prices');
-            const result = await response.json();
-            const payload = result.data || result;
-            set({ 
-                livePrices: { 
-                    prices: payload, 
-                    lastUpdated: result.timestamp || payload.last_updated || new Date().toISOString(), 
-                    loading: false, 
-                    error: null 
-                } 
-            });
-        } catch (error) {
-            set(state => ({ livePrices: { ...state.livePrices, loading: false, error: error.message } }));
-        }
+        // DISABLED: goodreturns.in is blocked on Render free tier
+        return null;
     },
 
     // Auth Actions
