@@ -62,16 +62,17 @@ export function useLivePrices() {
     }
   }, []);
 
+  // DISABLED: goodreturns.in is blocked on Render free tier
   // Fetch immediately on mount
-  useEffect(() => {
-    fetchPrices();
-  }, [fetchPrices]);
+  // useEffect(() => {
+  //   fetchPrices();
+  // }, [fetchPrices]);
 
   // Auto-refresh every 15 minutes
-  useEffect(() => {
-    const interval = setInterval(fetchPrices, 15 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [fetchPrices]);
+  // useEffect(() => {
+  //   const interval = setInterval(fetchPrices, 15 * 60 * 1000);
+  //   return () => clearInterval(interval);
+  // }, [fetchPrices]);
 
   return {
     prices,

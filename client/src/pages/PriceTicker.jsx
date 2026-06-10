@@ -52,7 +52,7 @@ const PriceTicker = () => {
                                 <tr key={row.label}>
                                     <td style={{ padding: '0.85rem 1rem', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)' }}>{row.label}</td>
                                     <td style={{ padding: '0.85rem 1rem', borderBottom: '1px solid var(--border)', color: 'var(--text-primary)' }}>
-                                        {row.value != null ? `₹ ${Number(row.value).toLocaleString('en-IN')}` : 'N/A'}
+                                        {row.value != null ? `₹ ${Number(row.value).toLocaleString('en-IN')}` : 'Live rates temporarily unavailable'}
                                     </td>
                                 </tr>
                             ))}

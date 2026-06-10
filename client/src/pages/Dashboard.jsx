@@ -89,7 +89,7 @@ const Dashboard = () => {
                 />
                 <StatCard
                     title="Gold Rate (22K)"
-                    value={ratesLoading ? 'Loading...' : rateData?.gold_22k_per_gram ? `₹ ${Number(rateData.gold_22k_per_gram).toLocaleString('en-IN')}` : 'Unavailable'}
+                    value={ratesLoading ? 'Loading...' : rateData?.gold_22k_per_gram ? `₹ ${Number(rateData.gold_22k_per_gram).toLocaleString('en-IN')}` : 'Live rates temporarily unavailable'}
                     trend={ratesError ? 'Rate service unavailable' : 'Live market source'}
                     trendUp={!ratesError}
                     icon={<TrendingUp color="var(--gold)" />}
@@ -122,15 +122,15 @@ const Dashboard = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
                         <div style={{ padding: '1rem', background: 'var(--bg)', borderRadius: '8px', border: '1px solid var(--border)' }}>
                             <div style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Gold 22K</div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{rateData?.gold_22k_per_gram ? `₹ ${Number(rateData.gold_22k_per_gram).toLocaleString('en-IN')}` : 'N/A'}</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{rateData?.gold_22k_per_gram ? `₹ ${Number(rateData.gold_22k_per_gram).toLocaleString('en-IN')}` : 'Live rates temporarily unavailable'}</div>
                         </div>
                         <div style={{ padding: '1rem', background: 'var(--bg)', borderRadius: '8px', border: '1px solid var(--border)' }}>
                             <div style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Gold 24K</div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{rateData?.gold_24k_per_gram ? `₹ ${Number(rateData.gold_24k_per_gram).toLocaleString('en-IN')}` : 'N/A'}</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{rateData?.gold_24k_per_gram ? `₹ ${Number(rateData.gold_24k_per_gram).toLocaleString('en-IN')}` : 'Live rates temporarily unavailable'}</div>
                         </div>
                         <div style={{ padding: '1rem', background: 'var(--bg)', borderRadius: '8px', border: '1px solid var(--border)' }}>
                             <div style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Silver per gram</div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{rateData?.silver_999_per_gram ? `₹ ${Number(rateData.silver_999_per_gram).toLocaleString('en-IN')}` : 'N/A'}</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{rateData?.silver_999_per_gram ? `₹ ${Number(rateData.silver_999_per_gram).toLocaleString('en-IN')}` : 'Live rates temporarily unavailable'}</div>
                         </div>
                     </div>
                 )}
