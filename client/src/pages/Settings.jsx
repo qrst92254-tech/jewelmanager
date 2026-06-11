@@ -16,7 +16,7 @@ const Settings = () => {
     const [invoiceTerms, setInvoiceTerms] = useState('Goods once sold cannot be returned. Weight differences subject to verification.');
     
     // Auth passwords state
-    const [passwordForm, setPasswordForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+    const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
 
     const fetchSettings = async () => {
         try {
@@ -89,24 +89,21 @@ const Settings = () => {
             return;
         }
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/auth/change-password`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+            const res = await fetch(`${API_URL}/api/settings/password`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({
-                    oldPassword: passwordForm.oldPassword,
+                    currentPassword: passwordForm.currentPassword,
                     newPassword: passwordForm.newPassword
                 })
             });
             if (res.ok) {
                 alert('Password changed successfully!');
-                setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
+                setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
             } else {
                 const err = await res.json();
-                alert(`Error: ${err.error || 'Failed to change password'}`);
+                alert(`Error: ${err.message || 'Failed to change password'}`);
             }
         } catch (e) { console.error(e); }
     };
@@ -176,7 +173,7 @@ const Settings = () => {
                     <form onSubmit={handleUpdatePassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         <div>
                             <label>Old Password *</label>
-                            <input type="password" required value={passwordForm.oldPassword} onChange={e => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })} />
+                            <input type="password" required value={passwordForm.currentPassword} onChange={e => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} />
                         </div>
                         <div>
                             <label>New Password *</label>
