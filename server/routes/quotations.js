@@ -3,6 +3,7 @@ const router = express.Router();
 const { queryAll, queryOne, insert, update } = require('../db/database');
 const { tenantId } = require('../db/tenant');
 const { supabase } = require('../services/supabase');
+const { checkLimit } = require('../utils/limitCheck');
 
 // Helper function to generate next sequential number
 async function nextSequentialNumber(table, column, prefix, uid) {
@@ -59,6 +60,10 @@ router.post('/', async (req, res) => {
       quotation_number, customer_name, customer_phone, gold_rate_used, silver_rate_used, valid_until,
       subtotal, gst_amount, grand_total, notes
     };
+    const limitResult = await checkLimit('quotations', uid);
+    if (!limitResult.allowed) {
+      return res.status(403).json({ message: limitResult.message });
+    }
     const result = await insert('quotations', quotationData, uid);
     const quotation_id = result.id;
 

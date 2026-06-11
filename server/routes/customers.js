@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { queryAll, queryOne, insert, update, deleteRow } = require('../db/database');
 const { tenantId } = require('../db/tenant');
+const { checkLimit } = require('../utils/limitCheck');
 
 const dateOrNull = (val) => (val === '' || val == null ? null : val);
 
@@ -170,6 +171,10 @@ router.post('/', async (req, res) => {
   };
 
   try {
+    const limitResult = await checkLimit('customers', uid);
+    if (!limitResult.allowed) {
+      return res.status(403).json({ message: limitResult.message });
+    }
     const result = await insert('customers', customerData, uid);
     res.status(201).json({ id: result.id, message: 'Customer created' });
   } catch (err) {

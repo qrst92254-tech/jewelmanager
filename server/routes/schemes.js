@@ -3,6 +3,7 @@ const router = express.Router();
 const { queryAll, queryOne, insert, update } = require('../db/database');
 const { tenantId } = require('../db/tenant');
 const { supabase } = require('../services/supabase');
+const { checkLimit } = require('../utils/limitCheck');
 
 // Helper function to generate next sequential number
 async function nextSequentialNumber(table, column, prefix, uid) {
@@ -34,6 +35,10 @@ router.post('/plans', async (req, res) => {
   const uid = tenantId(req);
   const { plan_name, duration_months, monthly_amount, bonus_month, scheme_type, description } = req.body;
   try {
+    const limitResult = await checkLimit('scheme_plans', uid);
+    if (!limitResult.allowed) {
+      return res.status(403).json({ message: limitResult.message });
+    }
     const planData = {
       plan_name, duration_months, monthly_amount, bonus_month, scheme_type, description
     };
@@ -87,6 +92,10 @@ router.post('/enrollments', async (req, res) => {
       scheme_number, plan_id, customer_name, customer_phone, start_date, end_date, monthly_amount, notes
     };
 
+    const limitResult = await checkLimit('scheme_enrollments', uid);
+    if (!limitResult.allowed) {
+      return res.status(403).json({ message: limitResult.message });
+    }
     const result = await insert('scheme_enrollments', enrollmentData, uid);
     res.status(201).json({ id: result.id, scheme_number: result.scheme_number });
   } catch (e) { res.status(500).json({ error: e.message }); }

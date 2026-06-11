@@ -144,7 +144,7 @@ const Customers = () => {
 
             if (!response.ok) {
                 const errData = await response.json();
-                throw new Error(errData.error || 'Failed to save customer');
+                throw new Error(errData.message || errData.error || 'Failed to save customer');
             }
 
             setIsModalOpen(false);

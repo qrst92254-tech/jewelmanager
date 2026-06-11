@@ -3,6 +3,7 @@ const router = express.Router();
 const { queryAll, queryOne, insert, update } = require('../db/database');
 const { tenantId } = require('../db/tenant');
 const { supabase } = require('../services/supabase');
+const { checkLimit } = require('../utils/limitCheck');
 
 const parseIntOrNull = (val) => {
   if (val === '' || val === null || val === undefined) return null;
@@ -101,22 +102,12 @@ router.post('/', async (req, res) => {
       assigned_to_karigar_id: parseIntOrNull(assigned_to_karigar_id),
       notes
     };
+    const limitResult = await checkLimit('repair_orders', uid);
+    if (!limitResult.allowed) {
+      return res.status(403).json({ message: limitResult.message });
+    }
     const result = await insert('repair_orders', repairData, uid);
     res.status(201).json({ id: result.id, job_number: result.job_number });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-router.put('/:id', async (req, res) => {
-  const uid = tenantId(req);
-  const { status, actual_charges, advance_paid, completion_date, delivery_date, notes } = req.body;
-  try {
-    const updateData = {
-      status, actual_charges, advance_paid,
-      completion_date: dateOrNull(completion_date), delivery_date: dateOrNull(delivery_date), notes
-    };
-    const result = await update('repair_orders', updateData, { id: parseInt(req.params.id) }, uid);
-    if (!result || result.length === 0) return res.status(404).json({ error: 'Not found' });
-    res.json({ message: 'Updated' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
