@@ -8,7 +8,8 @@ router.get('/', async (req, res) => {
     const uid = tenantId(req);
     const { data, error } = await supabase
       .from('shop_settings')
-      .select('key, value');
+      .select('key, value')
+      .eq('user_id', uid);
 
     if (error) {
       console.error('Error fetching settings:', error.message);
@@ -30,9 +31,10 @@ router.put('/:key', async (req, res) => {
       .upsert({
         key: req.params.key,
         value,
+        user_id: uid,
         updated_at: new Date().toISOString()
       }, {
-        onConflict: 'key'
+        onConflict: 'user_id,key'
       });
 
     if (error) throw error;
@@ -47,13 +49,14 @@ router.post('/batch', async (req, res) => {
     const settingsToUpsert = Object.entries(settings || {}).map(([key, value]) => ({
       key,
       value,
+      user_id: uid,
       updated_at: new Date().toISOString()
     }));
 
     const { error } = await supabase
       .from('shop_settings')
       .upsert(settingsToUpsert, {
-        onConflict: 'key'
+        onConflict: 'user_id,key'
       });
 
     if (error) throw error;
