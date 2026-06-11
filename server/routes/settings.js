@@ -46,6 +46,20 @@ router.post('/batch', async (req, res) => {
   try {
     const uid = tenantId(req);
     const { settings } = req.body;
+
+    // Validate GST fields if present
+    const gstFields = ['gst_on_making', 'gst_on_metal', 'gst_on_purchase', 'cgst_rate', 'sgst_rate'];
+    for (const key of gstFields) {
+      if (settings && settings[key] !== undefined) {
+        const num = parseFloat(settings[key]);
+        if (isNaN(num) || num < 0 || num > 30) {
+          return res.status(400).json({
+            message: `Invalid value for ${key}. Must be a number between 0 and 30.`
+          });
+        }
+      }
+    }
+
     const settingsToUpsert = Object.entries(settings || {}).map(([key, value]) => ({
       key,
       value,

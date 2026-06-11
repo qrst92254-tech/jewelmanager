@@ -15,6 +15,13 @@ const Settings = () => {
     const [gstin, setGstin] = useState('27AAAAA0000A1Z1');
     const [invoiceTerms, setInvoiceTerms] = useState('Goods once sold cannot be returned. Weight differences subject to verification.');
     
+    // GST settings state
+    const [gstOnMaking, setGstOnMaking] = useState(5);
+    const [gstOnMetal, setGstOnMetal] = useState(3);
+    const [gstOnPurchase, setGstOnPurchase] = useState(3);
+    const [cgstRate, setCgstRate] = useState(1.5);
+    const [sgstRate, setSgstRate] = useState(1.5);
+    
     // Auth passwords state
     const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
 
@@ -34,6 +41,11 @@ const Settings = () => {
                 if (data.shop_phone || data.phone) setPhone(data.shop_phone || data.phone);
                 if (data.shop_gstin || data.gstin) setGstin(data.shop_gstin || data.gstin);
                 if (data.bill_footer || data.invoice_terms) setInvoiceTerms(data.bill_footer || data.invoice_terms);
+                if (data.gst_on_making) setGstOnMaking(parseFloat(data.gst_on_making));
+                if (data.gst_on_metal) setGstOnMetal(parseFloat(data.gst_on_metal));
+                if (data.gst_on_purchase) setGstOnPurchase(parseFloat(data.gst_on_purchase));
+                if (data.cgst_rate) setCgstRate(parseFloat(data.cgst_rate));
+                if (data.sgst_rate) setSgstRate(parseFloat(data.sgst_rate));
             }
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
@@ -66,6 +78,11 @@ const Settings = () => {
                         phone,
                         gstin,
                         invoice_terms: invoiceTerms,
+                        gst_on_making: String(gstOnMaking),
+                        gst_on_metal: String(gstOnMetal),
+                        gst_on_purchase: String(gstOnPurchase),
+                        cgst_rate: String(cgstRate),
+                        sgst_rate: String(sgstRate),
                     }
                 })
             });
@@ -158,6 +175,37 @@ const Settings = () => {
                         <div>
                             <label>Invoice Terms & Disclaimers</label>
                             <textarea value={invoiceTerms} onChange={e => setInvoiceTerms(e.target.value)} rows="3" style={{ resize: 'none' }} />
+                        </div>
+                        <div className="settings-section" style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
+                            <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1rem', color: 'var(--gold)' }}>GST Configuration</h4>
+                            <p style={{ margin: '0 0 1rem 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                These rates are used for automatic GST calculation on invoices.
+                            </p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label>GST on Making (%)</label>
+                                    <input type="number" step="0.01" min="0" max="30" value={gstOnMaking} onChange={e => setGstOnMaking(e.target.value)} />
+                                </div>
+                                <div>
+                                    <label>GST on Metal (%)</label>
+                                    <input type="number" step="0.01" min="0" max="30" value={gstOnMetal} onChange={e => setGstOnMetal(e.target.value)} />
+                                </div>
+                                <div>
+                                    <label>GST on Purchases (%)</label>
+                                    <input type="number" step="0.01" min="0" max="30" value={gstOnPurchase} onChange={e => setGstOnPurchase(e.target.value)} />
+                                </div>
+                                <div>
+                                    <label>CGST Rate (%)</label>
+                                    <input type="number" step="0.01" min="0" max="15" value={cgstRate} onChange={e => setCgstRate(e.target.value)} />
+                                </div>
+                                <div>
+                                    <label>SGST Rate (%)</label>
+                                    <input type="number" step="0.01" min="0" max="15" value={sgstRate} onChange={e => setSgstRate(e.target.value)} />
+                                </div>
+                            </div>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem', display: 'block' }}>
+                                CGST + SGST = Total GST. Example: 3% GST = 1.5% CGST + 1.5% SGST
+                            </span>
                         </div>
                         <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start', marginTop: '0.5rem' }} disabled={saving}>
                             <Save size={16} style={{ marginRight: '6px' }} /> {saving ? 'Saving...' : 'Save Settings'}
