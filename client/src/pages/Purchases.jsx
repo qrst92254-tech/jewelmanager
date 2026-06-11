@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Truck, ArrowUpRight, Scale, X, CheckCircle, PlusCircle, Trash2 } from 'lucide-react';
+import { Plus, Search, Truck, ArrowUpRight, Scale, X, CheckCircle, PlusCircle, Trash2, Upload } from 'lucide-react';
+import ImportModal from '../components/ImportModal';
 import { authFetch } from '../utils/authFetch';
 
 const API_URL = '';
@@ -12,6 +13,7 @@ const Purchases = () => {
     const [activeMainTab, setActiveMainTab] = useState('orders'); // 'orders' or 'suppliers'
 
     // Modals
+    const [showImport, setShowImport] = useState(false);
     const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
 
@@ -167,6 +169,9 @@ const Purchases = () => {
                         <p style={{ color: 'var(--text-secondary)' }}>Log raw gold/silver metal buys, custom orders from wholesalers, and credit balances</p>
                     </div>
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <button className="btn-secondary" onClick={() => setShowImport(true)}>
+                            <Upload size={18} style={{ marginRight: '8px' }} /> Import
+                        </button>
                         <button className="btn-secondary" onClick={() => setIsSupplierModalOpen(true)}>Add Supplier</button>
                         <button className="btn-primary" onClick={() => setIsOrderModalOpen(true)}>
                             <Plus size={18} style={{ marginRight: '8px' }} /> Record Purchase
@@ -329,6 +334,13 @@ const Purchases = () => {
                     </div>
                 </div>
             )}
+
+            <ImportModal
+                isOpen={showImport}
+                onClose={() => setShowImport(false)}
+                importType="purchases"
+                onSuccess={() => { setShowImport(false); fetchOrders(); }}
+            />
 
             {/* Modals */}
             {isSupplierModalOpen && (

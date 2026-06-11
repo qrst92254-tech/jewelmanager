@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ProductForm from '../components/ProductForm';
-import { Edit, Trash2, PackageSearch, Plus, Search, Filter, X, Printer } from 'lucide-react';
+import { Edit, Trash2, PackageSearch, Plus, Search, Filter, X, Printer, Upload } from 'lucide-react';
+import ImportModal from '../components/ImportModal';
 
 const API_URL = '';
 
@@ -8,6 +9,7 @@ const StockManager = () => {
     const [products, setProducts] = useState([]);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const [showImport, setShowImport] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -136,9 +138,14 @@ const StockManager = () => {
             {/* Header Row */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h1 style={{ fontSize: '36px', color: 'var(--text-primary)', margin: 0 }}>Inventory</h1>
-                <button className="btn-primary" onClick={() => { setSelectedProduct(null); setIsFormOpen(true); }}>
-                    <Plus size={18} style={{ marginRight: '8px' }} /> Add Product
-                </button>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button className="btn-secondary" onClick={() => setShowImport(true)}>
+                        <Upload size={18} style={{ marginRight: '8px' }} /> Import
+                    </button>
+                    <button className="btn-primary" onClick={() => { setSelectedProduct(null); setIsFormOpen(true); }}>
+                        <Plus size={18} style={{ marginRight: '8px' }} /> Add Product
+                    </button>
+                </div>
             </div>
 
             {/* Error Banner */}
@@ -261,6 +268,13 @@ const StockManager = () => {
                     </div>
                 )}
             </div>
+
+            <ImportModal
+                isOpen={showImport}
+                onClose={() => setShowImport(false)}
+                importType="products"
+                onSuccess={() => { setShowImport(false); fetchProducts(); }}
+            />
 
             {/* Sliding Drawer Modal */}
             {isFormOpen && (

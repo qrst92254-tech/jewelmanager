@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import { Plus, Eye, Printer, Trash2, ShoppingCart, X, Share2 } from 'lucide-react';
+import { Plus, Eye, Printer, Trash2, ShoppingCart, X, Share2, Upload } from 'lucide-react';
 import SaleForm from '../components/SaleForm';
 import BillTemplate from '../components/BillTemplate';
+import ImportModal from '../components/ImportModal';
 import { authFetch } from '../utils/authFetch';
 
 const API_URL = '';
@@ -11,6 +12,7 @@ const Sales = () => {
     const [sales, setSales] = useState([]);
     const [products, setProducts] = useState([]);
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const [showImport, setShowImport] = useState(false);
     const [selectedSale, setSelectedSale] = useState(null);
     const [shopSettings, setShopSettings] = useState({});
     const [loading, setLoading] = useState(true);
@@ -125,9 +127,14 @@ const Sales = () => {
                     <h1 style={{ fontSize: '36px', color: 'var(--text-primary)', margin: '0 0 0.25rem 0' }}>Sales</h1>
                     <p style={{ color: 'var(--text-secondary)' }}>Create invoices and manage sales history</p>
                 </div>
-                <button className="btn-primary" onClick={() => setIsFormOpen(true)}>
-                    <Plus size={18} style={{ marginRight: '8px' }} /> New Sale
-                </button>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button className="btn-secondary" onClick={() => setShowImport(true)}>
+                        <Upload size={18} style={{ marginRight: '8px' }} /> Import
+                    </button>
+                    <button className="btn-primary" onClick={() => setIsFormOpen(true)}>
+                        <Plus size={18} style={{ marginRight: '8px' }} /> New Sale
+                    </button>
+                </div>
             </div>
 
             {/* Error Banner */}
@@ -207,6 +214,13 @@ const Sales = () => {
                 onClose={() => setIsFormOpen(false)}
                 onSave={handleSaveSale}
                 products={products}
+            />
+
+            <ImportModal
+                isOpen={showImport}
+                onClose={() => setShowImport(false)}
+                importType="sales"
+                onSuccess={() => { setShowImport(false); fetchSales(); }}
             />
 
             {/* Bill View Modal */}

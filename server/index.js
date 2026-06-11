@@ -28,6 +28,7 @@ const settingsRoutes = require('./routes/settings');
 const pricingRoutes = require('./routes/pricing');
 const creatorRoutes = require('./routes/creator');
 const adminRoutes = require('./routes/admin');
+const importRoutes = require('./routes/import');
 const { requireApiAuth } = require('./middleware/auth');
 const { checkSubscription } = require('./middleware/subscription');
 
@@ -191,8 +192,9 @@ async function startServer() {
         app.use('/api/purchases', requireApiAuth, purchasesRoutes);
         app.use('/api/reports', requireApiAuth, reportsRoutes);
         app.use('/api/accounting', requireApiAuth, accountingRoutes);
-        app.use('/api/settings', requireApiAuth, settingsRoutes);
-        app.use('/', pricingRoutes);
+app.use('/api/settings', requireApiAuth, settingsRoutes);
+app.use('/api/import', requireApiAuth, importRoutes);
+app.use('/', pricingRoutes);
         app.use('/', creatorRoutes);
 
         app.get('/dashboard*', checkSubscription, (req, res) => {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, User, CreditCard, Award, UserCheck, Calendar, MapPin, Phone, Mail, X, Trash2, Edit } from 'lucide-react';
+import { Plus, Search, User, CreditCard, Award, UserCheck, Calendar, MapPin, Phone, Mail, X, Trash2, Edit, Upload } from 'lucide-react';
+import ImportModal from '../components/ImportModal';
 
 const API_URL = '';
 
@@ -18,6 +19,7 @@ const Customers = () => {
     const [summaryError, setSummaryError] = useState(null);
 
     // Modal states
+    const [showImport, setShowImport] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [formData, setFormData] = useState({
@@ -222,9 +224,14 @@ const Customers = () => {
                         <h1 style={{ fontSize: '36px', color: 'var(--text-primary)', margin: 0 }}>Customer Directory & CRM</h1>
                         <p style={{ color: 'var(--text-secondary)' }}>Manage profiles, KYC records, loyalty points and credit accounts</p>
                     </div>
-                    <button className="btn-primary" onClick={handleOpenAddModal}>
-                        <Plus size={18} style={{ marginRight: '8px' }} /> Add Customer
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <button className="btn-secondary" onClick={() => setShowImport(true)}>
+                            <Upload size={18} style={{ marginRight: '8px' }} /> Import
+                        </button>
+                        <button className="btn-primary" onClick={handleOpenAddModal}>
+                            <Plus size={18} style={{ marginRight: '8px' }} /> Add Customer
+                        </button>
+                    </div>
                 </div>
 
                 {/* Summary Row */}
@@ -484,6 +491,13 @@ const Customers = () => {
             )}
 
             {/* Add/Edit Modal */}
+            <ImportModal
+                isOpen={showImport}
+                onClose={() => setShowImport(false)}
+                importType="customers"
+                onSuccess={() => { setShowImport(false); fetchCustomers(searchTerm); }}
+            />
+
             {isModalOpen && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 50, padding: '1rem' }}>
                     <div style={{ background: 'white', borderRadius: 'var(--radius)', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', width: '100%', maxWidth: '640px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
