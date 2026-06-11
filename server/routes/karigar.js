@@ -58,6 +58,7 @@ router.get('/', async (req, res) => {
   const uid = tenantId(req);
   try {
     const karigars = await queryAll('karigars', {
+      eq: { is_active: true },
       order: { column: 'created_at', ascending: false }
     }, uid);
     res.json(karigars);
