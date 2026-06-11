@@ -5,6 +5,12 @@ const { tenantId } = require('../db/tenant');
 const { supabase } = require('../services/supabase');
 const { checkLimit } = require('../utils/limitCheck');
 
+// Convert empty string dates to null for PostgreSQL
+function sanitizeDate(value) {
+  if (!value || value === '' || value === 'undefined') return null;
+  return value;
+}
+
 // Helper function to generate next sequential number
 async function nextSequentialNumber(table, column, prefix, uid) {
   let query = supabase.from(table).select(column);
@@ -140,7 +146,8 @@ router.post('/transactions', async (req, res) => {
 
     const transactionData = {
       karigar_id, transaction_type, metal, gross_weight, fine_weight, purity,
-      making_charges, wastage_percent, wastage_grams, order_description, expected_date, notes
+      making_charges, wastage_percent, wastage_grams, order_description,
+      expected_date: sanitizeDate(expected_date), notes
     };
 
     const { data: transResult, error: transError } = await supabase
@@ -176,7 +183,10 @@ router.post('/job-cards', async (req, res) => {
 
     const jobCardData = {
       karigar_id, job_card_number, product_description, category, purity,
-      gold_issued_grams, making_charges, order_date, expected_date, notes
+      gold_issued_grams, making_charges,
+      order_date: sanitizeDate(order_date),
+      expected_date: sanitizeDate(expected_date),
+      notes
     };
 
     const result = await supabase
@@ -212,7 +222,8 @@ router.put('/job-cards/:id', async (req, res) => {
     if (!karigar) return res.status(404).json({ error: 'Not found' });
 
     const updateData = {
-      status, gold_received_grams, wastage_grams, wastage_percent, completion_date
+      status, gold_received_grams, wastage_grams, wastage_percent,
+      completion_date: sanitizeDate(completion_date)
     };
 
     const { error: updateError } = await supabase
