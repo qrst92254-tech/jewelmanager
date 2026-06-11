@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { supabase } = require('../services/supabase');
+const { supabase, supabaseAdmin } = require('../services/supabase');
 const { tenantId } = require('../db/tenant');
 
 router.get('/', async (req, res) => {
@@ -90,32 +90,42 @@ router.put('/password', async (req, res) => {
   }
 
   try {
-    const { data: user, error: fetchError } = await supabase
+    // Get the user email from users table
+    const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('password_hash')
+      .select('email')
       .eq('id', uid)
       .single();
 
-    if (fetchError || !user) {
+    if (userError || !userData) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const bcrypt = require('bcryptjs');
-    const isValid = await bcrypt.compare(currentPassword, user.password_hash);
-    if (!isValid) {
+    // Verify current password against Supabase Auth
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: userData.email,
+      password: currentPassword,
+    });
+
+    if (signInError) {
       return res.status(401).json({ message: 'Current password is incorrect' });
     }
 
-    const newHash = await bcrypt.hash(newPassword, 10);
-
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ password_hash: newHash })
-      .eq('id', uid);
+    // Update password in Supabase Auth using admin API
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+      uid,
+      { password: newPassword }
+    );
 
     if (updateError) {
+      console.error('Supabase auth password update error:', updateError);
       return res.status(500).json({ message: 'Failed to update password' });
     }
+
+    // Also update password_hash in users table for backwards compatibility
+    const bcrypt = require('bcryptjs');
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await supabase.from('users').update({ password_hash: newHash }).eq('id', uid);
 
     return res.json({ success: true, message: 'Password updated successfully' });
   } catch (err) {
