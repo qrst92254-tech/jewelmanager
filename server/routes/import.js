@@ -161,6 +161,63 @@ router.post('/:type', requireApiAuth, upload.single('file'), async (req, res) =>
 
     if (!rawRows.length) return res.status(400).json({ error: 'File is empty' });
 
+    const labelMap = {};
+    for (const col of cols) {
+      labelMap[col.label.toLowerCase()] = col.label;
+    }
+    const ALIASES = {
+      qty: 'Quantity',
+      quantity: 'Quantity',
+      'making charges per g': 'Making Charges per Gram',
+      'making charges': 'Making Charges per Gram',
+      making: 'Making Charges per Gram',
+      'making %': 'Making Charges %',
+      'gross wt': 'Gross Weight',
+      weight: 'Gross Weight',
+      'net wt': 'Net Weight',
+      net: 'Net Weight',
+      'stone wt': 'Stone Weight',
+      'hsn': 'HSN Code',
+      'alert threshold': 'Stock Alert Threshold',
+      desc: 'Description',
+      dob: 'Date of Birth',
+      anniversary: 'Anniversary Date',
+      'customer type': 'Customer Type',
+      'credit limit': 'Credit Limit',
+      'outstanding': 'Outstanding Amount',
+      'total': 'Total Amount',
+      'payment mode': 'Payment Mode',
+      'supplier': 'Supplier Name',
+      'order date': 'Order Date',
+      'expected date': 'Expected Date',
+      'sub total': 'Subtotal',
+      'gst': 'GST Amount',
+      'grand total': 'Grand Total',
+      'amount paid': 'Amount Paid',
+      'payment method': 'Payment Method',
+      'bill date': 'Sale Date',
+      'sale date': 'Sale Date',
+      date: 'Sale Date',
+      'cust name': 'Customer Name',
+      'customer': 'Customer Name',
+      'cust phone': 'Customer Phone',
+    };
+    for (const [alias, canonical] of Object.entries(ALIASES)) {
+      labelMap[alias] = canonical;
+    }
+    rawRows = rawRows.map(row => {
+      const mapped = {};
+      for (const key of Object.keys(row)) {
+        const canonical = labelMap[key.trim().toLowerCase()];
+        if (canonical) {
+          mapped[canonical] = row[key];
+        } else {
+          mapped[key] = row[key];
+        }
+      }
+      return mapped;
+    });
+
     const errors = [];
     const validRows = [];
 
