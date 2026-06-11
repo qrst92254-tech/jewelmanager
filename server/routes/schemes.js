@@ -114,7 +114,6 @@ router.post('/enrollments/:id/payments', async (req, res) => {
 
     const paymentData = {
       enrollment_id: parseInt(req.params.id),
-      user_id: uid,
       payment_date, month_number, amount_paid, payment_method, receipt_number
     };
 

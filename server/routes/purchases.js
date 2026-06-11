@@ -138,7 +138,6 @@ router.post('/orders', async (req, res) => {
     if (items && items.length > 0) {
       const itemsToInsert = items.map(item => ({
         po_id,
-        user_id: uid,
         product_name: item.product_name,
         category: item.category,
         metal: item.metal,
