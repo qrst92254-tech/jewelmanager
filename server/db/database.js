@@ -117,9 +117,12 @@ async function queryAll(table, options = {}, userId = null) {
 
         // Apply ordering
         if (options.order) {
-            query = query.order(options.order.column, { 
-                ascending: options.order.ascending !== false 
-            });
+            const orders = Array.isArray(options.order) ? options.order : [options.order];
+            for (const o of orders) {
+                query = query.order(o.column, { 
+                    ascending: o.ascending !== false 
+                });
+            }
         }
 
         // Apply limit
