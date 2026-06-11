@@ -7,8 +7,7 @@ const { supabase } = require('../services/supabase');
 // Helper function to generate next sequential number
 async function nextSequentialNumber(table, column, prefix, uid) {
   let query = supabase.from(table).select(column);
-  // REMOVED: user_id filter - quotations table does not have user_id column
-  // if (uid) query = query.eq('user_id', uid);
+  if (uid) query = query.eq('user_id', uid);
   const { data, error } = await query.order(column, { ascending: false }).limit(1);
   
   if (error || !data || data.length === 0) {
