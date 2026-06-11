@@ -22,7 +22,7 @@ router.get('/ledger', async (req, res) => {
       options.lte = { entry_date: to };
     }
 
-    const entries = await queryAll('ledger_entries', options, uid);
+    const entries = await queryAll('ledger_entries', options);
     res.json(entries);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -35,7 +35,7 @@ router.post('/ledger', async (req, res) => {
       eq: { account_name },
       order: [{ column: 'entry_date', ascending: false }, { column: 'id', ascending: false }],
       limit: 1
-    }, uid);
+    });
     
     const prevBalance = prev[0]?.balance || 0;
     const balance = prevBalance + (credit || 0) - (debit || 0);
@@ -45,7 +45,7 @@ router.post('/ledger', async (req, res) => {
       reference_id, reference_type
     };
     
-    const result = await insert('ledger_entries', entryData, uid);
+    const result = await insert('ledger_entries', entryData);
     res.status(201).json({ message: 'Entry added', balance });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -90,7 +90,7 @@ router.post('/expenses', async (req, res) => {
       credit: 0,
       balance: 0
     };
-    await insert('ledger_entries', ledgerData, uid);
+    await insert('ledger_entries', ledgerData);
     
     res.status(201).json({ id: result.id });
   } catch (e) { res.status(500).json({ error: e.message }); }

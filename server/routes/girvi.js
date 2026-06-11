@@ -100,6 +100,7 @@ router.post('/', async (req, res) => {
   try {
     const girvi_number = await genGirviNumber(uid);
     const girviData = {
+      girvi_number,
       customer_name, customer_phone, customer_address, customer_id_proof,
       item_description, item_type, metal, purity, gross_weight, net_weight, stone_weight,
       valuation_rate, metal_value, loan_amount, interest_rate, interest_type,

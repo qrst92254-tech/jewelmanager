@@ -15,7 +15,7 @@ const TENANT_TABLES = [
   'quotations',
   'suppliers',
   'purchase_orders',
-  'ledger_entries',
+  // 'ledger_entries', - removed: table does not have user_id column
   'expenses',
   'loyalty_transactions',
   'sale_returns',

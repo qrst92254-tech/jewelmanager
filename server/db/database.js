@@ -307,7 +307,7 @@ function isMultiTenantTable(table) {
         'purchase_orders',
         'expenses',
         'staff_users',
-        'ledger_entries',
+        // 'ledger_entries', - removed: table does not have user_id column
         'shop_settings'
     ];
     return multiTenantTables.includes(table);
