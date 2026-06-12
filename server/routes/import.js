@@ -86,57 +86,9 @@ router.get('/template/:type', requireApiAuth, (req, res) => {
   if (!cols.length) return res.status(400).json({ error: 'Invalid import type' });
 
   const headerRow = cols.map(c => c.label);
-  const sampleRow = cols.map(c => {
-    const samples = {
-      'Name': 'Ramesh Sharma',
-      'Phone': '9876543210',
-      'Email': 'ramesh@example.com',
-      'Address': '42 Gold Street, Mumbai',
-      'City': 'Mumbai',
-      'Aadhaar Number': '1234-5678-9012',
-      'PAN Number': 'ABCDE1234F',
-      'Date of Birth': '1985-06-15',
-      'Anniversary Date': '2010-12-01',
-      'Customer Type': 'retail',
-      'Credit Limit': '50000',
-      'Outstanding Amount': '0',
-      'Notes': 'Regular customer',
-      'GSTIN': '27AAAAA0000A1Z1',
-      'Customer Name': 'Priya Patel',
-      'Customer Phone': '9876543211',
-      'Sale Date': '2026-06-01',
-      'Total Amount': '50000',
-      'Discount': '2000',
-      'Payment Mode': 'Cash',
-      'Supplier Name': 'Mumbai Gold Traders',
-      'Order Date': '2026-06-01',
-      'Expected Date': '2026-06-10',
-      'Subtotal': '48000',
-      'GST Amount': '1440',
-      'Grand Total': '49440',
-      'Amount Paid': '49440',
-      'Payment Method': 'bank',
-      'SKU': 'GOLD-CHAIN-001',
-      'Category': 'chain',
-      'Metal': 'gold',
-      'Purity': '22K',
-      'Gross Weight': '25.5',
-      'Net Weight': '25.0',
-      'Stone Weight': '0',
-      'Making Charges per Gram': '50',
-      'Making Charges %': '8',
-      'Wastage %': '2',
-      'Stone Charges': '0',
-      'Quantity': '1',
-      'HSN Code': '7113',
-      'Stock Alert Threshold': '2',
-      'Description': 'Gold chain for retail',
-    };
-    return samples[c.label] || '';
-  });
 
   const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet([headerRow, sampleRow]);
+  const ws = XLSX.utils.aoa_to_sheet([headerRow]);
   XLSX.utils.book_append_sheet(wb, ws, type);
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
