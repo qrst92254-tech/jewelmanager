@@ -368,14 +368,8 @@ router.post('/:type', requireApiAuth, upload.single('file'), async (req, res) =>
                 description: row['Description'] || null,
               };
 
-              const { error: upsertError } = await supabase
-                .from('products')
-                .upsert({ ...data, user_id: uid }, { onConflict: 'sku' })
-                .select()
-                .single();
-
-              if (upsertError) throw upsertError;
-              saved.push(data.sku);
+              const result = await insert('products', data, uid);
+              saved.push(result.id);
               break;
             }
           }
