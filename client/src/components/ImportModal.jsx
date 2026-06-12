@@ -16,6 +16,7 @@ const ImportModal = ({ isOpen, onClose, importType, onSuccess }) => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
   const fileRef = useRef(null);
 
   if (!isOpen) return null;
@@ -42,6 +43,7 @@ const ImportModal = ({ isOpen, onClose, importType, onSuccess }) => {
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    setSelectedFile(file);
     setLoading(true);
     setError('');
     try {
@@ -64,11 +66,16 @@ const ImportModal = ({ isOpen, onClose, importType, onSuccess }) => {
   };
 
   const handleConfirmImport = async () => {
+    if (!selectedFile) {
+      setError('No file selected. Please upload again.');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError('');
     try {
       const formData = new FormData();
-      formData.append('file', fileRef.current.files[0]);
+      formData.append('file', selectedFile);
       const res = await fetch(`${API_URL}/api/import/${importType}?confirm=true`, {
         method: 'POST',
         credentials: 'include',
@@ -90,6 +97,7 @@ const ImportModal = ({ isOpen, onClose, importType, onSuccess }) => {
     setResult(null);
     setError('');
     setLoading(false);
+    setSelectedFile(null);
     if (fileRef.current) fileRef.current.value = '';
     onClose();
   };
