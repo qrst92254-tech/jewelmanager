@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { TrendingUp, AlertCircle, ShoppingBag, Package, Plus, Users, Hammer, Coins, Wrench, Calendar } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
@@ -10,12 +10,14 @@ const Dashboard = () => {
     const [error, setError] = useState(null);
     const { data: metalRates, loading: ratesLoading, error: ratesError } = useMetalRates();
     const navigate = useNavigate();
+    const navigateRef = useRef(navigate);
+    useEffect(() => { navigateRef.current = navigate; }, [navigate]);
 
     useEffect(() => {
         const fetchStats = async () => {
             const token = localStorage.getItem('jewel_token');
             if (!token) {
-                navigate('/login');
+                navigateRef.current('/login');
                 return;
             }
 
@@ -31,7 +33,7 @@ const Dashboard = () => {
                     if (body.code === 'SESSION_INVALIDATED') {
                         alert('You have been logged out because your account was accessed on another device.');
                     }
-                    navigate('/login');
+                    navigateRef.current('/login');
                     return;
                 }
                 if (!response.ok) {
@@ -48,7 +50,7 @@ const Dashboard = () => {
         };
 
         fetchStats();
-    }, [navigate]);
+    }, []);
 
     const recentSalesChartData = stats?.recentSales?.map((sale, index) => ({
         name: sale.bill_number || `Sale ${index + 1}`,
