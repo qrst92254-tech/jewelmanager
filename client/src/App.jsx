@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import useStore from './store/useStore';
 
@@ -35,6 +35,19 @@ function App() {
         checkAuth();
     }, []);
 
+    // PWA offline detection
+    const [isOffline, setIsOffline] = useState(!navigator.onLine);
+    useEffect(() => {
+      const handleOnline = () => setIsOffline(false);
+      const handleOffline = () => setIsOffline(true);
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
+    }, []);
+
     if (authLoading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg)' }}>
@@ -49,6 +62,24 @@ function App() {
 
     return (
         <Router>
+            {/* PWA Offline Banner */}
+            {isOffline && (
+              <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                zIndex: 9999,
+                backgroundColor: '#f59e0b',
+                color: '#ffffff',
+                textAlign: 'center',
+                padding: '8px',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}>
+                You are offline. Some features may not work.
+              </div>
+            )}
             <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }} className="app-layout">
                 <Navbar />
                     <div 
