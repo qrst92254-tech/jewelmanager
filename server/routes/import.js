@@ -109,7 +109,7 @@ router.post('/:type', requireApiAuth, upload.single('file'), async (req, res) =>
   try {
     const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
     const ws = wb.Sheets[wb.SheetNames[0]];
-    const rawRows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    let rawRows = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
     if (!rawRows.length) return res.status(400).json({ error: 'File is empty' });
 
