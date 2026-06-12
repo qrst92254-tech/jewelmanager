@@ -32,7 +32,7 @@ const Login = () => {
     };
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', width: '100%', overflow: 'hidden' }} className="fade-in">
+        <div style={{ display: 'flex', minHeight: '100vh', width: '100%', overflowY: 'auto', overflowX: 'hidden' }} className="fade-in login-container">
             {/* Left Branding Side (60%) */}
             <div 
                 style={{ 
@@ -44,6 +44,7 @@ const Login = () => {
                     justifyContent: 'center',
                     padding: '4rem'
                 }}
+                className="login-branding"
             >
                 {/* Diagonal divider element */}
                 <div 
@@ -102,6 +103,7 @@ const Login = () => {
                     justifyContent: 'center',
                     padding: '3rem'
                 }}
+                className="login-form-side"
             >
                 <div style={{ width: '100%', maxWidth: '400px' }}>
                     <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
@@ -154,6 +156,25 @@ const Login = () => {
                     {/* Default credentials hint removed */}
                 </div>
             </div>
+
+            <style>{`
+                @media (max-width: 768px) {
+                    .login-container {
+                        flex-direction: column !important;
+                    }
+                    .login-branding {
+                        flex: 0 0 auto !important;
+                        padding: 2rem 1.5rem !important;
+                    }
+                    .login-branding h1 {
+                        font-size: 32px !important;
+                    }
+                    .login-form-side {
+                        flex: 0 0 auto !important;
+                        padding: 2rem 1.5rem !important;
+                    }
+                }
+            `}</style>
         </div>
     );
 };

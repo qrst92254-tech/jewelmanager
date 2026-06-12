@@ -51,14 +51,16 @@ function App() {
         <Router>
             <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }} className="app-layout">
                 <Navbar />
-                <div 
+                    <div 
                     style={{ 
                         flexGrow: 1, 
                         display: 'flex', 
                         flexDirection: 'column', 
                         marginLeft: isAuthenticated ? '260px' : '0px', 
                         transition: 'margin-left 0.3s ease',
-                        overflowX: 'hidden'
+                        overflowX: 'hidden',
+                        overflowY: 'auto',
+                        minHeight: '100vh'
                     }} 
                     className="content-container"
                 >
@@ -110,6 +112,11 @@ function App() {
                     }
                     .content-container {
                         margin-left: 0px !important;
+                        overflow-y: visible !important;
+                        min-height: auto !important;
+                    }
+                    .main-content {
+                        padding: 1rem !important;
                     }
                 }
             ` }} />

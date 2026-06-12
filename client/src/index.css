@@ -20,7 +20,20 @@
   --radius-lg: 16px;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; max-width: 100%; }
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+}
+
 body {
   font-family: 'DM Sans', sans-serif;
   background-color: var(--bg);
