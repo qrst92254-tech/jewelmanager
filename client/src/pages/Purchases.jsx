@@ -206,6 +206,7 @@ const Purchases = () => {
                                             <th>PO Number</th>
                                             <th>Supplier</th>
                                             <th>Order Date</th>
+                                            <th style={{ textAlign: 'right' }}>Purchase Amount</th>
                                             <th style={{ textAlign: 'right' }}>Total Cost</th>
                                             <th style={{ textAlign: 'right' }}>Amount Paid</th>
                                             <th style={{ textAlign: 'center' }}>Status</th>
@@ -217,6 +218,7 @@ const Purchases = () => {
                                                 <td style={{ fontWeight: 600, color: 'var(--gold)' }}>{o.po_number}</td>
                                                 <td>{o.supplier_name}</td>
                                                 <td>{new Date(o.order_date).toLocaleDateString('en-IN')}</td>
+                                                <td style={{ textAlign: 'right' }}>₹{(o.total_amount || o.grand_total).toLocaleString('en-IN')}</td>
                                                 <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{o.grand_total.toLocaleString('en-IN')}</td>
                                                 <td style={{ textAlign: 'right' }}>₹{o.amount_paid.toLocaleString('en-IN')}</td>
                                                 <td style={{ textAlign: 'center' }}>
@@ -292,12 +294,13 @@ const Purchases = () => {
                             <div>📅 Purchase Date: {new Date(selectedOrder.order_date).toLocaleDateString()}</div>
                         </div>
 
-                        <div style={{ padding: '10px', background: 'var(--bg)', borderRadius: '8px' }}>
-                            <div style={{ fontWeight: 600, marginBottom: '4px' }}>Charges & Outlay</div>
-                            <div>💵 Total Bill Amount: ₹{selectedOrder.grand_total.toLocaleString()}</div>
-                            <div>💸 Amount Settled: ₹{selectedOrder.amount_paid.toLocaleString()}</div>
-                            <div style={{ color: '#FF5252', fontWeight: 600 }}>💵 Credit Balance: ₹{(selectedOrder.grand_total - selectedOrder.amount_paid).toLocaleString()}</div>
-                        </div>
+                            <div style={{ padding: '10px', background: 'var(--bg)', borderRadius: '8px' }}>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Charges & Outlay</div>
+                                <div>💵 Purchase Amount: ₹{(selectedOrder.total_amount || selectedOrder.grand_total).toLocaleString()}</div>
+                                <div>💰 Total Bill Value: ₹{selectedOrder.grand_total.toLocaleString()}</div>
+                                <div>💸 Amount Settled: ₹{selectedOrder.amount_paid.toLocaleString()}</div>
+                                <div style={{ color: '#FF5252', fontWeight: 600 }}>💵 Credit Balance: ₹{(selectedOrder.grand_total - selectedOrder.amount_paid).toLocaleString()}</div>
+                            </div>
 
                         {selectedOrder.items && (
                             <div style={{ padding: '10px', background: 'var(--bg)', borderRadius: '8px' }}>

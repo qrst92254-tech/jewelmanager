@@ -42,7 +42,7 @@ async function saveUserRates(userId, rates) {
       metal,
       city: 'Chennai',
       currency: 'INR',
-      price: rates[metal] ? parseFloat(rates[metal]) : null,
+      price: parseFloat(rates[metal]) || 0,
       source: 'manual',
       updated_date: today,
       fetched_at: new Date().toISOString(),

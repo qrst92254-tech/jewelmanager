@@ -87,7 +87,11 @@ router.post('/', async (req, res) => {
         items,
         discount,
         payment_mode,
-        notes
+        notes,
+        cgst_rate,
+        sgst_rate,
+        cgst_amount: cgst_amount_body,
+        sgst_amount: sgst_amount_body
     } = req.body;
 
     if (!customer_name || !items || items.length === 0) {
@@ -96,11 +100,11 @@ router.post('/', async (req, res) => {
 
     try {
         const total_amount = items.reduce((acc, item) => acc + (item.price_at_sale * item.quantity), 0);
+        const final_cgst_rate = cgst_rate || 1.5;
+        const final_sgst_rate = sgst_rate || 1.5;
         const final_amount_before_gst = total_amount - (discount || 0);
-        const cgst_rate = 1.5;
-        const sgst_rate = 1.5;
-        const cgst_amount = final_amount_before_gst * (cgst_rate / 100);
-        const sgst_amount = final_amount_before_gst * (sgst_rate / 100);
+        const cgst_amount = cgst_amount_body ?? final_amount_before_gst * (final_cgst_rate / 100);
+        const sgst_amount = sgst_amount_body ?? final_amount_before_gst * (final_sgst_rate / 100);
         const final_amount = final_amount_before_gst + cgst_amount + sgst_amount;
 
         const bill_number = await nextSaleBillNumber(uid);
@@ -112,8 +116,8 @@ router.post('/', async (req, res) => {
             customer_phone,
             total_amount,
             discount: discount || 0,
-            cgst_rate,
-            sgst_rate,
+            cgst_rate: final_cgst_rate,
+            sgst_rate: final_sgst_rate,
             cgst_amount,
             sgst_amount,
             final_amount,
