@@ -119,7 +119,7 @@ router.get('/orders/:id', async (req, res) => {
 
 router.post('/orders', async (req, res) => {
   const uid = tenantId(req);
-  const { supplier_id, order_date, expected_date, subtotal, gst_amount, grand_total,
+  const { supplier_id, order_date, expected_date, subtotal, gst_amount, grand_total, total_amount,
     amount_paid, payment_method, notes, items } = req.body;
   if (!supplier_id || !order_date) return res.status(400).json({ error: 'Supplier and date required' });
   try {
@@ -129,7 +129,7 @@ router.post('/orders', async (req, res) => {
     const po_number = await nextSequentialNumber('purchase_orders', 'po_number', 'PO', uid);
     const orderData = {
       po_number, supplier_id, order_date: dateOrNull(order_date), expected_date: dateOrNull(expected_date),
-      subtotal, gst_amount, grand_total,
+      subtotal, gst_amount, grand_total, total_amount,
       amount_paid, payment_method, notes
     };
     const result = await insert('purchase_orders', orderData, uid);

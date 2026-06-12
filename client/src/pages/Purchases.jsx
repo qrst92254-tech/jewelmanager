@@ -21,7 +21,7 @@ const Purchases = () => {
     const [supplierForm, setSupplierForm] = useState({ name: '', contact_person: '', phone: '', email: '', address: '', gstin: '', supplier_type: 'wholesaler' });
     const [orderForm, setOrderForm] = useState({
         supplier_id: '', order_date: new Date().toISOString().split('T')[0], expected_date: '',
-        amount_paid: 0, payment_method: 'cash', notes: ''
+        total_amount: 0, amount_paid: 0, payment_method: 'cash', notes: ''
     });
     const [items, setItems] = useState([
         { product_name: 'Raw Gold Bar 999', category: 'bullion', metal: 'gold', purity: '24K', gross_weight: 100, net_weight: 100, quantity: 1, rate_per_gram: 7200, making_charges: 0 }
@@ -149,7 +149,7 @@ const Purchases = () => {
             });
             setIsOrderModalOpen(false);
             setItems([{ product_name: 'Raw Gold Bar 999', category: 'bullion', metal: 'gold', purity: '24K', gross_weight: 100, net_weight: 100, quantity: 1, rate_per_gram: 7200, making_charges: 0 }]);
-            setOrderForm({ supplier_id: suppliers[0]?.id || '', order_date: new Date().toISOString().split('T')[0], expected_date: '', amount_paid: 0, payment_method: 'cash', notes: '' });
+            setOrderForm({ supplier_id: suppliers[0]?.id || '', order_date: new Date().toISOString().split('T')[0], expected_date: '', total_amount: 0, amount_paid: 0, payment_method: 'cash', notes: '' });
             await Promise.all([fetchOrders(), fetchSuppliers()]);
         } catch (err) {
             alert(err.message || 'Failed to record purchase');
@@ -437,7 +437,8 @@ const Purchases = () => {
                                     <div>GST (3%): ₹{totals.gst_amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                                     <div style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--gold)', marginTop: '4px' }}>Grand Total: ₹{totals.grand_total.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                                    <div><label>Purchase Amount (₹)</label><input type="number" min="0" step="0.01" placeholder="Enter total amount" value={orderForm.total_amount || ''} onChange={e => setOrderForm({ ...orderForm, total_amount: parseFloat(e.target.value) || 0 })} /></div>
                                     <div><label>Immediate Payment (₹)</label><input type="number" value={orderForm.amount_paid} onChange={e => setOrderForm({ ...orderForm, amount_paid: parseFloat(e.target.value) || 0 })} /></div>
                                     <div>
                                         <label>Payment Method</label>
