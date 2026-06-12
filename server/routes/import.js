@@ -173,31 +173,70 @@ router.post('/:type', requireApiAuth, upload.single('file'), async (req, res) =>
     const errors = [];
     const validRows = [];
 
-    rawRows.forEach((row, i) => {
-      const rowErrors = [];
+    // SKU auto-generation setup — runs ONCE before the loop, not per row
+    let skuMaxNum = 0;
+    let skuCounter = 0;
+    if (type === 'products') {
+      const { data: existingSkus } = await supabase
+        .from('products')
+        .select('sku')
+        .eq('user_id', uid)
+        .like('sku', 'SKU-%');
 
+      if (existingSkus && existingSkus.length > 0) {
+        existingSkus.forEach(item => {
+          const num = parseInt((item.sku || '').replace('SKU-', '')) || 0;
+          if (num > skuMaxNum) skuMaxNum = num;
+        });
+      }
+    }
+
+    const requiredFields = {
+      customers: ['Name'],
+      sales: ['Customer Name'],
+      purchases: ['Supplier Name'],
+      products: ['Name']
+    };
+
+    rawRows.forEach((row, i) => {
       for (const col of cols) {
         const val = row[col.label];
         if (val === undefined || val === null) row[col.label] = '';
       }
 
-      for (const col of cols) {
-        if (col.required) {
-          const val = String(row[col.label] || '').trim();
-          if (!val) {
-            rowErrors.push(`Missing: ${col.label}`);
-          }
-        }
+      const missingRequired = requiredFields[type].filter(f => !row[f] || String(row[f]).trim() === '');
+      if (missingRequired.length > 0) {
+        errors.push({ row: i + 2, errors: [`Missing: ${missingRequired.join(', ')}`], data: { ...row } });
+        return;
       }
 
       const allEmpty = cols.every(col => String(row[col.label] || '').trim() === '');
       if (allEmpty) return;
 
-      if (rowErrors.length) {
-        errors.push({ row: i + 2, errors: rowErrors, data: { ...row } });
-      } else {
-        validRows.push(row);
+      // SKU auto-generation for missing SKUs
+      if (type === 'products' && (!row['SKU'] || row['SKU'] === '')) {
+        skuCounter++;
+        row['SKU'] = `SKU-${String(skuMaxNum + skuCounter).padStart(4, '0')}`;
       }
+
+      // Apply defaults for missing optional fields
+      if (type === 'products') {
+        row['Category'] = row['Category'] || 'Uncategorized';
+        row['Metal'] = row['Metal'] || 'Gold';
+        row['Gross Weight'] = row['Gross Weight'] || '0';
+        row['Net Weight'] = row['Net Weight'] || '0';
+      }
+      if (type === 'customers') {
+        row['Phone'] = row['Phone'] || '';
+      }
+      if (type === 'sales') {
+        row['Sale Date'] = row['Sale Date'] || new Date().toISOString().split('T')[0];
+      }
+      if (type === 'purchases') {
+        row['Order Date'] = row['Order Date'] || new Date().toISOString().split('T')[0];
+      }
+
+      validRows.push(row);
     });
 
     if (confirm) {
