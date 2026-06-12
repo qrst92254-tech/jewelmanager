@@ -1,48 +1,56 @@
-import { useState, useEffect } from 'react';
-
-const API_URL = '';
+import { useState, useEffect, useCallback } from 'react';
 
 export function useMetalRates() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    let active = true;
+  const fetchRates = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch('/api/prices/live');
+      const json = await res.json();
 
-    const fetchRates = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // DISABLED: goodreturns.in is blocked on Render free tier
-        // const response = await fetch(`${API_URL}/api/prices/live`);
-        // const json = await response.json();
-
-        // if (!response.ok || json.success !== true) {
-        //   throw new Error(json.error || 'Failed to load rates');
-        // }
-
-        if (active) {
-          setData({ gold: null, silver: null });
-        }
-      } catch (err) {
-        if (active) {
-          setError(err.message || 'Server not reachable');
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
+      if (json.success) {
+        setData(json.data);
+      } else {
+        setError(json.message || 'Failed to load rates');
       }
-    };
-
-    fetchRates();
-
-    return () => {
-      active = false;
-    };
+    } catch (err) {
+      setError('Could not connect to server');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return { data, loading, error };
+  useEffect(() => {
+    fetchRates();
+  }, [fetchRates]);
+
+  const updateRates = useCallback(async (newRates) => {
+    try {
+      setSaving(true);
+      const res = await fetch('/api/prices/live', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newRates),
+      });
+      const json = await res.json();
+
+      if (json.success) {
+        setData(json.data);
+        return { success: true };
+      } else {
+        return { success: false, message: json.message };
+      }
+    } catch (err) {
+      return { success: false, message: 'Could not connect to server' };
+    } finally {
+      setSaving(false);
+    }
+  }, []);
+
+  return { data, loading, error, saving, updateRates, refetch: fetchRates };
 }

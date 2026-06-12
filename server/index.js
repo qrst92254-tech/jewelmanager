@@ -179,7 +179,7 @@ async function startServer() {
         }));
 
         app.use('/api/auth', authRoutes);
-        app.use('/api/prices', priceRoutes);
+        app.use('/api/prices', requireApiAuth, priceRoutes);
         app.use('/api/admin', adminRoutes);
         app.use('/api/products', requireApiAuth, productRoutes);
         app.use('/api/sales', requireApiAuth, salesRoutes);
