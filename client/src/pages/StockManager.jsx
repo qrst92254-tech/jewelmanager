@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import ProductForm from '../components/ProductForm';
 import { Edit, Trash2, PackageSearch, Plus, Search, Filter, X, Printer, Upload } from 'lucide-react';
 import ImportModal from '../components/ImportModal';
+import { authFetch } from '../utils/authFetch';
 
 const API_URL = '';
 
@@ -17,15 +18,7 @@ const StockManager = () => {
     const fetchProducts = useCallback(async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem('jewel_token');
-            const response = await fetch(`${API_URL}/api/products`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (!response.ok) throw new Error('Failed to fetch products');
-            const data = await response.json();
+            const data = await authFetch(`${API_URL}/api/products`);
             setProducts(data);
         } catch (err) {
             setError(err.message);
@@ -41,21 +34,12 @@ const StockManager = () => {
     const handleFormSubmit = async (productData) => {
         const url = selectedProduct ? `${API_URL}/api/products/${selectedProduct.id}` : `${API_URL}/api/products`;
         const method = selectedProduct ? 'PUT' : 'POST';
-        const token = localStorage.getItem('jewel_token');
 
         try {
-            const response = await fetch(url, {
+            await authFetch(url, {
                 method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
                 body: JSON.stringify(productData),
             });
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.error || 'Form submission failed');
-            }
             await fetchProducts();
             handleCloseForm();
         } catch (err) {
@@ -71,15 +55,7 @@ const StockManager = () => {
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this product?')) {
             try {
-                const token = localStorage.getItem('jewel_token');
-                const response = await fetch(`${API_URL}/api/products/${id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(token && { 'Authorization': `Bearer ${token}` })
-                    }
-                });
-                if (!response.ok) throw new Error('Failed to delete product');
+                await authFetch(`${API_URL}/api/products/${id}`, { method: 'DELETE' });
                 await fetchProducts();
             } catch (err) {
                 setError(err.message);

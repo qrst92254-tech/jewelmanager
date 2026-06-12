@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { Calendar, FileText, Download, BarChart2, ShieldAlert, TrendingUp, IndianRupee, ArrowDownCircle, AlertCircle } from 'lucide-react';
+import { authFetch } from '../utils/authFetch';
 
 const API_URL = '';
 
@@ -22,53 +23,29 @@ const Reports = () => {
 
     const fetchFinancial = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/reports/financial?from=${fromVal}&to=${toVal}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) setFinancial(await res.json());
+            const data = await authFetch(`${API_URL}/api/reports/financial?from=${fromVal}&to=${toVal}`);
+            setFinancial(data);
         } catch (e) { console.error(e); }
     };
 
     const fetchGst = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/reports/gst?month=${monthVal}&year=${yearVal}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) setGst(await res.json());
+            const data = await authFetch(`${API_URL}/api/reports/gst?month=${monthVal}&year=${yearVal}`);
+            setGst(data);
         } catch (e) { console.error(e); }
     };
 
     const fetchStock = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/reports/stock`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) setStock(await res.json());
+            const data = await authFetch(`${API_URL}/api/reports/stock`);
+            setStock(data);
         } catch (e) { console.error(e); }
     };
 
     const fetchTopProducts = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/reports/top-products?limit=10`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) setTopProducts(await res.json());
+            const data = await authFetch(`${API_URL}/api/reports/top-products?limit=10`);
+            setTopProducts(data);
         } catch (e) { console.error(e); }
     };
 

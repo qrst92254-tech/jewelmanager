@@ -31,49 +31,26 @@ const Schemes = () => {
 
     const fetchPlans = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/schemes/plans`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setPlans(data);
-                if (data.length > 0 && !enrollForm.plan_id) {
-                    setEnrollForm(prev => ({ ...prev, plan_id: data[0].id }));
-                }
+            const data = await authFetch(`${API_URL}/api/schemes/plans`);
+            setPlans(data);
+            if (data.length > 0 && !enrollForm.plan_id) {
+                setEnrollForm(prev => ({ ...prev, plan_id: data[0].id }));
             }
         } catch (e) { console.error(e); }
     };
 
     const fetchEnrollments = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/schemes/enrollments`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) setEnrollments(await res.json());
+            const data = await authFetch(`${API_URL}/api/schemes/enrollments`);
+            setEnrollments(data);
         } catch (e) { console.error(e); }
     };
 
     const loadEnrollmentDetails = async (enrollment) => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/schemes/enrollments/${enrollment.id}/payments`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) {
-                setSelectedEnrollment(enrollment);
-                setPayments(await res.json());
-            }
+            const data = await authFetch(`${API_URL}/api/schemes/enrollments/${enrollment.id}/payments`);
+            setSelectedEnrollment(enrollment);
+            setPayments(data);
         } catch (e) { console.error(e); }
     };
 
@@ -127,24 +104,17 @@ const Schemes = () => {
     const handleRecordPayment = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/schemes/enrollments/${selectedEnrollment.id}/payments`, {
+            await authFetch(`${API_URL}/api/schemes/enrollments/${selectedEnrollment.id}/payments`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
                 body: JSON.stringify(paymentForm)
             });
-            if (res.ok) {
-                setIsPaymentModalOpen(false);
-                setPaymentForm({ payment_date: new Date().toISOString().split('T')[0], amount_paid: selectedEnrollment.monthly_amount, payment_method: 'cash' });
-                await fetchEnrollments();
-                if (selectedEnrollment) {
-                    const refreshed = enrollments.find(e => e.id === selectedEnrollment.id);
-                    if (refreshed) loadEnrollmentDetails(refreshed);
-                    else loadEnrollmentDetails(selectedEnrollment);
-                }
+            setIsPaymentModalOpen(false);
+            setPaymentForm({ payment_date: new Date().toISOString().split('T')[0], amount_paid: selectedEnrollment.monthly_amount, payment_method: 'cash' });
+            await fetchEnrollments();
+            if (selectedEnrollment) {
+                const refreshed = enrollments.find(e => e.id === selectedEnrollment.id);
+                if (refreshed) loadEnrollmentDetails(refreshed);
+                else loadEnrollmentDetails(selectedEnrollment);
             }
         } catch (e) { console.error(e); }
     };

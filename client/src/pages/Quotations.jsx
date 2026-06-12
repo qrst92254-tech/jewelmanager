@@ -25,27 +25,15 @@ const Quotations = () => {
 
     const fetchQuotations = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/quotations`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) setQuotations(await res.json());
+            const data = await authFetch(`${API_URL}/api/quotations`);
+            setQuotations(data);
         } catch (e) { console.error(e); }
     };
 
     const loadQuotationDetails = async (quotation) => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/quotations/${quotation.id}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) setSelectedQuotation(await res.json());
+            const data = await authFetch(`${API_URL}/api/quotations/${quotation.id}`);
+            setSelectedQuotation(data);
         } catch (e) { console.error(e); }
     };
 
@@ -159,14 +147,8 @@ const Quotations = () => {
         if (!window.confirm('Do you want to convert this quotation into a completed sale/invoice?')) return;
         
         try {
-            const token = localStorage.getItem('jewel_token');
-            // Register sale in backend
-            const saleRes = await fetch(`${API_URL}/api/sales`, {
+            const saleData = await authFetch(`${API_URL}/api/sales`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
                 body: JSON.stringify({
                     customer_name: selectedQuotation.customer_name || 'Walkin Customer',
                     customer_phone: selectedQuotation.customer_phone || '',
@@ -190,24 +172,17 @@ const Quotations = () => {
                 })
             });
 
-            if (!saleRes.ok) throw new Error('Failed to create sale from quotation');
-            const saleData = await saleRes.json();
-
-            // Update quotation status to converted
-            const quoRes = await fetch(`${API_URL}/api/quotations/${selectedQuotation.id}`, {
+            await authFetch(`${API_URL}/api/quotations/${selectedQuotation.id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     status: 'converted',
                     converted_to_sale_id: saleData.id
                 })
             });
 
-            if (quoRes.ok) {
-                alert('Quotation successfully converted to Sale Invoice!');
-                await fetchQuotations();
-                setSelectedQuotation(null);
-            }
+            alert('Quotation successfully converted to Sale Invoice!');
+            await fetchQuotations();
+            setSelectedQuotation(null);
         } catch (e) {
             alert(`Error: ${e.message}`);
         }

@@ -1,46 +1,20 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { TrendingUp, AlertCircle, ShoppingBag, Package, Plus, Users, Hammer, Coins, Wrench, Calendar } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { useMetalRates } from '../hooks/useMetalRates';
+import { authFetch } from '../utils/authFetch';
 
 const Dashboard = () => {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const { data: metalRates, loading: ratesLoading, error: ratesError } = useMetalRates();
-    const navigate = useNavigate();
-    const navigateRef = useRef(navigate);
-    useEffect(() => { navigateRef.current = navigate; }, [navigate]);
 
     useEffect(() => {
         const fetchStats = async () => {
-            const token = localStorage.getItem('jewel_token');
-            if (!token) {
-                navigateRef.current('/login');
-                return;
-            }
-
             try {
-                const response = await fetch('/api/auth/dashboard-stats', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.status === 401 || response.status === 403) {
-                    const body = await response.json().catch(() => ({}));
-                    localStorage.removeItem('jewel_token');
-                    localStorage.removeItem('jewel_user');
-                    if (body.code === 'SESSION_INVALIDATED') {
-                        alert('You have been logged out because your account was accessed on another device.');
-                    }
-                    navigateRef.current('/login');
-                    return;
-                }
-                if (!response.ok) {
-                    throw new Error("Failed to fetch dashboard data.");
-                }
-
-                const data = await response.json();
+                const data = await authFetch('/api/auth/dashboard-stats');
                 setStats(data);
             } catch (err) {
                 setError(err.message || 'Unable to load dashboard data.');

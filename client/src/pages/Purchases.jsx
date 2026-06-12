@@ -29,46 +29,25 @@ const Purchases = () => {
 
     const fetchSuppliers = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/purchases/suppliers`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setSuppliers(data);
-                if (data.length > 0 && !orderForm.supplier_id) {
-                    setOrderForm(prev => ({ ...prev, supplier_id: data[0].id }));
-                }
+            const data = await authFetch(`${API_URL}/api/purchases/suppliers`);
+            setSuppliers(data);
+            if (data.length > 0 && !orderForm.supplier_id) {
+                setOrderForm(prev => ({ ...prev, supplier_id: data[0].id }));
             }
         } catch (e) { console.error(e); }
     };
 
     const fetchOrders = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/purchases/orders`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) setOrders(await res.json());
+            const data = await authFetch(`${API_URL}/api/purchases/orders`);
+            setOrders(data);
         } catch (e) { console.error(e); }
     };
 
     const loadOrderDetails = async (order) => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/purchases/orders/${order.id}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) setSelectedOrder(await res.json());
+            const data = await authFetch(`${API_URL}/api/purchases/orders/${order.id}`);
+            setSelectedOrder(data);
         } catch (e) { console.error(e); }
     };
 

@@ -29,53 +29,29 @@ const Repairs = () => {
 
     const fetchRepairs = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/repairs?status=${statusFilter}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) setRepairs(await res.json());
+            const data = await authFetch(`${API_URL}/api/repairs?status=${statusFilter}`);
+            setRepairs(data);
         } catch (e) { console.error(e); }
     };
 
     const fetchKarigars = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/karigar`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) setKarigars(await res.json());
+            const data = await authFetch(`${API_URL}/api/karigar`);
+            setKarigars(data);
         } catch (e) { console.error(e); }
     };
 
     const fetchCounts = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/repairs/summary/counts`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) setCounts(await res.json());
+            const data = await authFetch(`${API_URL}/api/repairs/summary/counts`);
+            setCounts(data);
         } catch (e) { console.error(e); }
     };
 
     const loadRepairDetails = async (repair) => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/repairs/${repair.id}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) setSelectedRepair(await res.json());
+            const data = await authFetch(`${API_URL}/api/repairs/${repair.id}`);
+            setSelectedRepair(data);
         } catch (e) { console.error(e); }
     };
 
@@ -110,20 +86,13 @@ const Repairs = () => {
     const handleResolveRepair = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/repairs/${selectedRepair.id}`, {
+            await authFetch(`${API_URL}/api/repairs/${selectedRepair.id}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
                 body: JSON.stringify(resolveForm)
             });
-            if (res.ok) {
-                setIsResolveModalOpen(false);
-                await Promise.all([fetchRepairs(), fetchCounts()]);
-                setSelectedRepair(null);
-            }
+            setIsResolveModalOpen(false);
+            await Promise.all([fetchRepairs(), fetchCounts()]);
+            setSelectedRepair(null);
         } catch (e) { console.error(e); }
     };
 

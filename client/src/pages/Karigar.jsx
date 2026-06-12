@@ -27,41 +27,23 @@ const Karigar = () => {
 
     const fetchKarigars = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/karigar`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) setKarigars(await res.json());
+            const data = await authFetch(`${API_URL}/api/karigar`);
+            setKarigars(data);
         } catch (e) { console.error(e); }
     };
 
     const fetchJobCards = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/karigar/job-cards/all`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) setJobCards(await res.json());
+            const data = await authFetch(`${API_URL}/api/karigar/job-cards/all`);
+            setJobCards(data);
         } catch (e) { console.error(e); }
     };
 
     const loadKarigarDetails = async (karigar) => {
         setSelectedKarigar(karigar);
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/karigar/${karigar.id}/transactions`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) setTransactions(await res.json());
+            const data = await authFetch(`${API_URL}/api/karigar/${karigar.id}/transactions`);
+            setTransactions(data);
         } catch (e) { console.error(e); }
     };
 
@@ -104,24 +86,17 @@ const Karigar = () => {
     const handleCreateTx = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/karigar/transactions`, {
+            await authFetch(`${API_URL}/api/karigar/transactions`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
                 body: JSON.stringify({ ...txForm, karigar_id: selectedKarigar.id })
             });
-            if (res.ok) {
-                setIsTxModalOpen(false);
-                setTxForm({ transaction_type: 'issue', metal: 'gold', gross_weight: 0, fine_weight: 0, purity: '22K', making_charges: 0, wastage_percent: 0, wastage_grams: 0, order_description: '', expected_date: '', notes: '' });
-                await fetchKarigars();
-                if (selectedKarigar) {
-                    const refreshed = karigars.find(k => k.id === selectedKarigar.id);
-                    if (refreshed) loadKarigarDetails(refreshed);
-                    else loadKarigarDetails(selectedKarigar);
-                }
+            setIsTxModalOpen(false);
+            setTxForm({ transaction_type: 'issue', metal: 'gold', gross_weight: 0, fine_weight: 0, purity: '22K', making_charges: 0, wastage_percent: 0, wastage_grams: 0, order_description: '', expected_date: '', notes: '' });
+            await fetchKarigars();
+            if (selectedKarigar) {
+                const refreshed = karigars.find(k => k.id === selectedKarigar.id);
+                if (refreshed) loadKarigarDetails(refreshed);
+                else loadKarigarDetails(selectedKarigar);
             }
         } catch (e) { console.error(e); }
     };
@@ -153,22 +128,15 @@ const Karigar = () => {
     const handleResolveJob = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/karigar/job-cards/${selectedJob.id}`, {
+            await authFetch(`${API_URL}/api/karigar/job-cards/${selectedJob.id}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
                 body: JSON.stringify(resolveJobForm)
             });
-            if (res.ok) {
-                setIsResolveJobModalOpen(false);
-                setSelectedJob(null);
-                await fetchJobCards();
-                await fetchKarigars();
-                if (selectedKarigar) loadKarigarDetails(selectedKarigar);
-            }
+            setIsResolveJobModalOpen(false);
+            setSelectedJob(null);
+            await fetchJobCards();
+            await fetchKarigars();
+            if (selectedKarigar) loadKarigarDetails(selectedKarigar);
         } catch (e) { console.error(e); }
     };
 

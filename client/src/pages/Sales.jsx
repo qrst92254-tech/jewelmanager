@@ -22,15 +22,7 @@ const Sales = () => {
 
     const fetchSales = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const response = await fetch(`${API_URL}/api/sales`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (!response.ok) throw new Error('Failed to fetch sales');
-            const data = await response.json();
+            const data = await authFetch(`${API_URL}/api/sales`);
             setSales(data);
         } catch (err) {
             setError(err.message);
@@ -41,15 +33,7 @@ const Sales = () => {
 
     const fetchProducts = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const response = await fetch(`${API_URL}/api/products`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (!response.ok) throw new Error('Failed to fetch products');
-            const data = await response.json();
+            const data = await authFetch(`${API_URL}/api/products`);
             setProducts(data);
         } catch (err) {
             console.error("Error fetching products for sale form:", err);
@@ -78,15 +62,7 @@ const Sales = () => {
     const handleDeleteSale = async (id) => {
         if (window.confirm('Are you sure you want to delete this sale? This action cannot be undone.')) {
             try {
-                const token = localStorage.getItem('jewel_token');
-                const response = await fetch(`${API_URL}/api/sales/${id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(token && { 'Authorization': `Bearer ${token}` })
-                    }
-                });
-                if (!response.ok) throw new Error('Failed to delete sale');
+                await authFetch(`${API_URL}/api/sales/${id}`, { method: 'DELETE' });
                 fetchSales();
             } catch (err) {
                 alert(`Error: ${err.message}`);

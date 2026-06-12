@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Save, Store, Shield, Key } from 'lucide-react';
+import { authFetch } from '../utils/authFetch';
 
 const API_URL = '';
 
@@ -27,26 +28,17 @@ const Settings = () => {
 
     const fetchSettings = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/settings`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.shop_name) setShopName(data.shop_name);
-                if (data.shop_address || data.address) setAddress(data.shop_address || data.address);
-                if (data.shop_phone || data.phone) setPhone(data.shop_phone || data.phone);
-                if (data.shop_gstin || data.gstin) setGstin(data.shop_gstin || data.gstin);
-                if (data.bill_footer || data.invoice_terms) setInvoiceTerms(data.bill_footer || data.invoice_terms);
-                if (data.gst_on_making) setGstOnMaking(parseFloat(data.gst_on_making));
-                if (data.gst_on_metal) setGstOnMetal(parseFloat(data.gst_on_metal));
-                if (data.gst_on_purchase) setGstOnPurchase(parseFloat(data.gst_on_purchase));
-                if (data.cgst_rate) setCgstRate(parseFloat(data.cgst_rate));
-                if (data.sgst_rate) setSgstRate(parseFloat(data.sgst_rate));
-            }
+            const data = await authFetch(`${API_URL}/api/settings`);
+            if (data.shop_name) setShopName(data.shop_name);
+            if (data.shop_address || data.address) setAddress(data.shop_address || data.address);
+            if (data.shop_phone || data.phone) setPhone(data.shop_phone || data.phone);
+            if (data.shop_gstin || data.gstin) setGstin(data.shop_gstin || data.gstin);
+            if (data.bill_footer || data.invoice_terms) setInvoiceTerms(data.bill_footer || data.invoice_terms);
+            if (data.gst_on_making) setGstOnMaking(parseFloat(data.gst_on_making));
+            if (data.gst_on_metal) setGstOnMetal(parseFloat(data.gst_on_metal));
+            if (data.gst_on_purchase) setGstOnPurchase(parseFloat(data.gst_on_purchase));
+            if (data.cgst_rate) setCgstRate(parseFloat(data.cgst_rate));
+            if (data.sgst_rate) setSgstRate(parseFloat(data.sgst_rate));
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
     };
@@ -60,13 +52,8 @@ const Settings = () => {
         setSaving(true);
         setMessage('');
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/settings/batch`, {
+            await authFetch(`${API_URL}/api/settings/batch`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
                 body: JSON.stringify({
                     settings: {
                         shop_name: shopName,
@@ -86,12 +73,8 @@ const Settings = () => {
                     }
                 })
             });
-            if (res.ok) {
-                setMessage('Settings saved successfully!');
-                setTimeout(() => setMessage(''), 3000);
-            } else {
-                throw new Error('Failed to save settings');
-            }
+            setMessage('Settings saved successfully!');
+            setTimeout(() => setMessage(''), 3000);
         } catch (err) {
             alert(`Error: ${err.message}`);
         } finally {

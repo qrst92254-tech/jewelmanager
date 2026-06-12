@@ -35,44 +35,23 @@ const Girvi = () => {
 
     const fetchLoans = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/girvi?status=${statusFilter}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) setLoans(await res.json());
+            const data = await authFetch(`${API_URL}/api/girvi?status=${statusFilter}`);
+            setLoans(data);
         } catch (e) { console.error(e); }
     };
 
     const fetchOverdueSummary = async () => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/girvi/summary/overdue`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) setOverdueSummary(await res.json());
+            const data = await authFetch(`${API_URL}/api/girvi/summary/overdue`);
+            setOverdueSummary(data);
         } catch (e) { console.error(e); }
     };
 
     const loadLoanDetails = async (loan) => {
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/girvi/${loan.id}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setSelectedLoan(data);
-                setPayments(data.payments || []);
-            }
+            const data = await authFetch(`${API_URL}/api/girvi/${loan.id}`);
+            setSelectedLoan(data);
+            setPayments(data.payments || []);
         } catch (e) { console.error(e); }
     };
 
@@ -124,43 +103,29 @@ const Girvi = () => {
     const handleAddPayment = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/girvi/${selectedLoan.id}/payments`, {
+            await authFetch(`${API_URL}/api/girvi/${selectedLoan.id}/payments`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
                 body: JSON.stringify(paymentForm)
             });
-            if (res.ok) {
-                setIsPaymentModalOpen(false);
-                setPaymentForm({
-                    payment_date: new Date().toISOString().split('T')[0], amount_paid: 0, interest_amount: 0, principal_amount: 0, payment_method: 'cash', notes: ''
-                });
-                await Promise.all([fetchLoans(), fetchOverdueSummary()]);
-                if (selectedLoan) loadLoanDetails(selectedLoan);
-            }
+            setIsPaymentModalOpen(false);
+            setPaymentForm({
+                payment_date: new Date().toISOString().split('T')[0], amount_paid: 0, interest_amount: 0, principal_amount: 0, payment_method: 'cash', notes: ''
+            });
+            await Promise.all([fetchLoans(), fetchOverdueSummary()]);
+            if (selectedLoan) loadLoanDetails(selectedLoan);
         } catch (e) { console.error(e); }
     };
 
     const handleReleaseLoan = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('jewel_token');
-            const res = await fetch(`${API_URL}/api/girvi/${selectedLoan.id}`, {
+            await authFetch(`${API_URL}/api/girvi/${selectedLoan.id}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                },
                 body: JSON.stringify(releaseForm)
             });
-            if (res.ok) {
-                setIsReleaseModalOpen(false);
-                await Promise.all([fetchLoans(), fetchOverdueSummary()]);
-                setSelectedLoan(null);
-            }
+            setIsReleaseModalOpen(false);
+            await Promise.all([fetchLoans(), fetchOverdueSummary()]);
+            setSelectedLoan(null);
         } catch (e) { console.error(e); }
     };
 
