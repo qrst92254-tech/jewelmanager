@@ -32,7 +32,12 @@ function App() {
     const checkAuth = useStore(state => state.checkAuth);
 
     useEffect(() => {
-        checkAuth();
+        checkAuth().then(() => {
+            const state = useStore.getState();
+            if (state.auth.isAuthenticated) {
+                state.preloadData();
+            }
+        });
     }, []);
 
     // PWA offline detection

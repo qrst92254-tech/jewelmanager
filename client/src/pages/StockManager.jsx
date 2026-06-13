@@ -3,6 +3,7 @@ import ProductForm from '../components/ProductForm';
 import { Edit, Trash2, PackageSearch, Plus, Search, Filter, X, Printer, Upload } from 'lucide-react';
 import ImportModal from '../components/ImportModal';
 import { authFetch } from '../utils/authFetch';
+import useStore from '../store/useStore';
 
 const API_URL = '';
 
@@ -14,6 +15,10 @@ const StockManager = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
+
+    const cachedProducts = useStore(state => state.cache.products);
+    const cacheLoading = useStore(state => state.cache.productsLoading);
+    const invalidateCache = useStore(state => state.invalidateCache);
 
     const fetchProducts = useCallback(async () => {
         try {
@@ -28,8 +33,15 @@ const StockManager = () => {
     }, []);
 
     useEffect(() => {
-        fetchProducts();
-    }, [fetchProducts]);
+        if (cachedProducts !== null) {
+            // Use cached data — instant load
+            setProducts(cachedProducts);
+            setLoading(false);
+        } else {
+            // Cache miss — fetch normally
+            fetchProducts();
+        }
+    }, [cachedProducts, fetchProducts]);
 
     const handleFormSubmit = async (productData) => {
         const url = selectedProduct ? `${API_URL}/api/products/${selectedProduct.id}` : `${API_URL}/api/products`;
@@ -40,6 +52,7 @@ const StockManager = () => {
                 method,
                 body: JSON.stringify(productData),
             });
+            invalidateCache('products');
             await fetchProducts();
             handleCloseForm();
         } catch (err) {
@@ -56,6 +69,7 @@ const StockManager = () => {
         if (window.confirm('Are you sure you want to delete this product?')) {
             try {
                 await authFetch(`${API_URL}/api/products/${id}`, { method: 'DELETE' });
+                invalidateCache('products');
                 await fetchProducts();
             } catch (err) {
                 setError(err.message);
@@ -169,8 +183,36 @@ const StockManager = () => {
 
             {/* Product Table */}
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                {loading ? (
-                    <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading inventory...</div>
+                {loading || cacheLoading ? (
+                    <div style={{ padding: '1rem' }}>
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} style={{
+                                display: 'grid',
+                                gridTemplateColumns: '100px 1fr 120px 120px 80px 80px 100px',
+                                gap: '1rem',
+                                padding: '1rem 1.5rem',
+                                borderBottom: '1px solid var(--border)',
+                                alignItems: 'center'
+                            }}>
+                                {[100, 180, 100, 100, 60, 60, 80].map((w, j) => (
+                                    <div key={j} style={{
+                                        height: '14px',
+                                        width: `${w}px`,
+                                        borderRadius: '7px',
+                                        background: 'linear-gradient(90deg, var(--border) 25%, var(--bg-card) 50%, var(--border) 75%)',
+                                        backgroundSize: '200% 100%',
+                                        animation: 'shimmer 1.5s infinite',
+                                    }} />
+                                ))}
+                            </div>
+                        ))}
+                        <style>{`
+                            @keyframes shimmer {
+                                0% { background-position: 200% 0; }
+                                100% { background-position: -200% 0; }
+                            }
+                        `}</style>
+                    </div>
                 ) : products.length === 0 ? (
                     <div style={{ padding: '4rem', textAlign: 'center' }}>
                         <PackageSearch size={48} color="var(--border)" style={{ margin: '0 auto 1rem' }} />

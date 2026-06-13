@@ -5,6 +5,7 @@ import SaleForm from '../components/SaleForm';
 import BillTemplate from '../components/BillTemplate';
 import ImportModal from '../components/ImportModal';
 import { authFetch } from '../utils/authFetch';
+import useStore from '../store/useStore';
 
 const API_URL = '';
 
@@ -18,12 +19,16 @@ const Sales = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const cachedSales = useStore(state => state.cache.sales);
+    const invalidateCache = useStore(state => state.invalidateCache);
+
     const billRef = useRef();
 
     const fetchSales = async () => {
         try {
             const data = await authFetch(`${API_URL}/api/sales`);
             setSales(data);
+            useStore.setState(s => ({ cache: { ...s.cache, sales: data } }));
         } catch (err) {
             setError(err.message);
         } finally {
@@ -41,9 +46,14 @@ const Sales = () => {
     };
 
     useEffect(() => {
-        fetchSales();
+        if (cachedSales !== null) {
+            setSales(cachedSales);
+            setLoading(false);
+        } else {
+            fetchSales();
+        }
         fetchProducts();
-    }, []);
+    }, [cachedSales]);
 
     const handleSaveSale = async (saleData) => {
         try {
@@ -51,6 +61,7 @@ const Sales = () => {
                 method: 'POST',
                 body: JSON.stringify(saleData),
             });
+            invalidateCache('sales');
             setIsFormOpen(false);
             fetchSales();
             fetchProducts();
@@ -63,6 +74,7 @@ const Sales = () => {
         if (window.confirm('Are you sure you want to delete this sale? This action cannot be undone.')) {
             try {
                 await authFetch(`${API_URL}/api/sales/${id}`, { method: 'DELETE' });
+                invalidateCache('sales');
                 fetchSales();
             } catch (err) {
                 alert(`Error: ${err.message}`);
@@ -128,7 +140,35 @@ const Sales = () => {
                 </div>
 
                 {loading ? (
-                    <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading sales...</div>
+                    <div style={{ padding: '1rem' }}>
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} style={{
+                                display: 'grid',
+                                gridTemplateColumns: '120px 1fr 120px 100px 100px',
+                                gap: '1rem',
+                                padding: '1rem 1.5rem',
+                                borderBottom: '1px solid var(--border)',
+                                alignItems: 'center'
+                            }}>
+                                {[100, 160, 100, 80, 80].map((w, j) => (
+                                    <div key={j} style={{
+                                        height: '14px',
+                                        width: `${w}px`,
+                                        borderRadius: '7px',
+                                        background: 'linear-gradient(90deg, var(--border) 25%, var(--bg-card) 50%, var(--border) 75%)',
+                                        backgroundSize: '200% 100%',
+                                        animation: 'shimmer 1.5s infinite',
+                                    }} />
+                                ))}
+                            </div>
+                        ))}
+                        <style>{`
+                            @keyframes shimmer {
+                                0% { background-position: 200% 0; }
+                                100% { background-position: -200% 0; }
+                            }
+                        `}</style>
+                    </div>
                 ) : sales.length === 0 ? (
                     <div style={{ padding: '4rem', textAlign: 'center' }}>
                         <ShoppingCart size={48} color="var(--border)" style={{ margin: '0 auto 1rem', display: 'block' }} />

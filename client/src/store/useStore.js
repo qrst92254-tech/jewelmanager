@@ -1,3 +1,4 @@
+import { authFetch } from '../utils/authFetch';
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
@@ -39,6 +40,16 @@ const useStore = create(devtools((set, get) => ({
         loading: true,
     },
 
+    // Preloaded Data Cache
+    cache: {
+        products: null,      // null = not loaded yet, [] = loaded but empty
+        sales: null,
+        customers: null,
+        productsLoading: false,
+        salesLoading: false,
+        customersLoading: false,
+    },
+
     // Price Actions
     fetchPrices: async () => {
         // DISABLED: goodreturns.in is blocked on Render free tier
@@ -78,6 +89,8 @@ const useStore = create(devtools((set, get) => ({
         localStorage.setItem('jewel_user', user.email);
         localStorage.setItem('jewel_is_admin', user.role === 'admin' ? 'true' : 'false');
         set({ auth: { isAuthenticated: true, user: user.email, token: null, isAdmin: user.role === 'admin', loading: false } });
+        // Trigger preload after login
+        setTimeout(() => get().preloadData(), 0);
     },
 
     logout: async () => {
@@ -89,6 +102,40 @@ const useStore = create(devtools((set, get) => ({
         localStorage.removeItem('jewel_user');
         localStorage.removeItem('jewel_is_admin');
         set({ auth: { isAuthenticated: false, user: null, token: null, isAdmin: false, loading: false } });
+    },
+
+    // Preload all critical data after login
+    preloadData: async () => {
+        const state = get();
+        // Don't preload if not authenticated
+        if (!state.auth.isAuthenticated) return;
+
+        // Set all loading flags
+        set(s => ({ cache: { ...s.cache, productsLoading: true, salesLoading: true, customersLoading: true } }));
+
+        // Fetch all 3 in parallel — if one fails, others still complete
+        const [productsResult, salesResult, customersResult] = await Promise.allSettled([
+            authFetch('/api/products'),
+            authFetch('/api/sales'),
+            authFetch('/api/customers'),
+        ]);
+
+        set(s => ({
+            cache: {
+                ...s.cache,
+                products: productsResult.status === 'fulfilled' ? productsResult.value : s.cache.products,
+                sales: salesResult.status === 'fulfilled' ? salesResult.value : s.cache.sales,
+                customers: customersResult.status === 'fulfilled' ? customersResult.value : s.cache.customers,
+                productsLoading: false,
+                salesLoading: false,
+                customersLoading: false,
+            }
+        }));
+    },
+
+    // Invalidate one cache entry (called after add/edit/delete)
+    invalidateCache: (key) => {
+        set(s => ({ cache: { ...s.cache, [key]: null } }));
     },
 })));
 

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, User, CreditCard, Award, UserCheck, Calendar, MapPin, Phone, Mail, X, Trash2, Edit, Upload } from 'lucide-react';
 import ImportModal from '../components/ImportModal';
+import useStore from '../store/useStore';
+import { authFetch } from '../utils/authFetch';
 
 const API_URL = '';
 
@@ -17,6 +19,9 @@ const Customers = () => {
     const [customerSummary, setCustomerSummary] = useState(null);
     const [summaryLoading, setSummaryLoading] = useState(false);
     const [summaryError, setSummaryError] = useState(null);
+
+    const cachedCustomers = useStore(state => state.cache.customers);
+    const invalidateCache = useStore(state => state.invalidateCache);
 
     // Modal states
     const [showImport, setShowImport] = useState(false);
@@ -48,6 +53,9 @@ const Customers = () => {
             if (!response.ok) throw new Error('Failed to fetch customers');
             const data = await response.json();
             setCustomers(data);
+            if (!query) {
+                useStore.setState(s => ({ cache: { ...s.cache, customers: data } }));
+            }
         } catch (err) {
             setError(err.message);
         } finally {
@@ -86,8 +94,13 @@ const Customers = () => {
     };
 
     useEffect(() => {
+        if (cachedCustomers !== null) {
+            setCustomers(cachedCustomers);
+            setLoading(false);
+            return;
+        }
         fetchCustomers();
-    }, []);
+    }, [cachedCustomers]);
 
     useEffect(() => {
         if (selectedCustomer) {
@@ -150,6 +163,7 @@ const Customers = () => {
             }
 
             setIsModalOpen(false);
+            invalidateCache('customers');
             fetchCustomers(searchTerm);
             if (selectedCustomer && selectedCustomer.id === formData.id) {
                 const updatedCustomer = await fetch(`${API_URL}/api/customers/${formData.id}`, { credentials: 'include', headers: { 'Content-Type': 'application/json' } }).then(r => r.json());
@@ -170,6 +184,7 @@ const Customers = () => {
                     headers: { 'Content-Type': 'application/json' }
                 });
                 if (!response.ok) throw new Error('Failed to delete customer');
+                invalidateCache('customers');
                 fetchCustomers(searchTerm);
                 if (selectedCustomer?.id === id) setSelectedCustomer(null);
             } catch (err) {
@@ -289,7 +304,45 @@ const Customers = () => {
                     </div>
 
                     {loading ? (
-                        <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading customer directory...</div>
+                        <div style={{ padding: '1rem' }}>
+                            {[...Array(6)].map((_, i) => (
+                                <div key={i} style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '1rem',
+                                    padding: '1rem 1.5rem',
+                                    borderBottom: '1px solid var(--border)',
+                                }}>
+                                    <div style={{
+                                        width: '40px', height: '40px', borderRadius: '50%',
+                                        background: 'linear-gradient(90deg, var(--border) 25%, var(--bg-card) 50%, var(--border) 75%)',
+                                        backgroundSize: '200% 100%',
+                                        animation: 'shimmer 1.5s infinite',
+                                        flexShrink: 0
+                                    }} />
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        <div style={{
+                                            height: '14px', width: '160px', borderRadius: '7px',
+                                            background: 'linear-gradient(90deg, var(--border) 25%, var(--bg-card) 50%, var(--border) 75%)',
+                                            backgroundSize: '200% 100%',
+                                            animation: 'shimmer 1.5s infinite',
+                                        }} />
+                                        <div style={{
+                                            height: '12px', width: '120px', borderRadius: '6px',
+                                            background: 'linear-gradient(90deg, var(--border) 25%, var(--bg-card) 50%, var(--border) 75%)',
+                                            backgroundSize: '200% 100%',
+                                            animation: 'shimmer 1.5s infinite',
+                                        }} />
+                                    </div>
+                                </div>
+                            ))}
+                            <style>{`
+                                @keyframes shimmer {
+                                    0% { background-position: 200% 0; }
+                                    100% { background-position: -200% 0; }
+                                }
+                            `}</style>
+                        </div>
                     ) : customers.length === 0 ? (
                         <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
                             <h3>No Customers Found</h3>
