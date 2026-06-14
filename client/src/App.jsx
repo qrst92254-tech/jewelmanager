@@ -88,23 +88,40 @@ function App() {
           <p style={{ color: 'var(--text-secondary)', maxWidth: '400px', lineHeight: 1.6 }}>
             {blockReason || 'Your 14-day free trial has ended. Contact the administrator to continue using JewelManager Pro.'}
           </p>
-          <a 
-            href="https://wa.me/919876543210" 
-            target="_blank"
-            rel="noreferrer"
-            style={{
-              marginTop: '0.5rem',
-              padding: '0.75rem 2rem',
-              background: '#25D366',
-              color: 'white',
-              borderRadius: '8px',
-              textDecoration: 'none',
-              fontWeight: 600,
-              fontSize: '1rem'
-            }}
-          >
-            💬 Contact on WhatsApp
-          </a>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center', marginTop: '0.5rem' }}>
+            <a 
+              href="https://wa.me/919395359101"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: '#25D366',
+                color: 'white',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                fontWeight: 600,
+                fontSize: '1rem'
+              }}
+            >
+              💬 WhatsApp
+            </a>
+            <a 
+              href="https://instagram.com/direct/new/"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)',
+                color: 'white',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                fontWeight: 600,
+                fontSize: '1rem'
+              }}
+            >
+              📸 Instagram DM
+            </a>
+          </div>
         </div>
       );
     }

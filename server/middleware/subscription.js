@@ -6,7 +6,8 @@ async function checkSubscription(req, res, next) {
 
   // Admin is never blocked
   const adminEmail = process.env.ADMIN_EMAIL || process.env.CREATOR_EMAIL;
-  if (req.session.userEmail && req.session.userEmail === adminEmail) return next();
+  const sessionEmail = req.session.userEmail || req.session.user?.email || req.user?.email;
+  if (sessionEmail && adminEmail && sessionEmail === adminEmail) return next();
 
   try {
     const { data, error } = await supabaseAdmin
