@@ -106,25 +106,64 @@ export default function AdminUsers() {
           <thead>
             <tr style={{ background: '#f0f0f0' }}>
               <th style={{ padding: '0.75rem', textAlign: 'left' }}>Email</th>
+              <th style={{ padding: '0.75rem', textAlign: 'left' }}>Shop / Name</th>
               <th style={{ padding: '0.75rem', textAlign: 'left' }}>Created</th>
-              <th style={{ padding: '0.75rem', textAlign: 'left' }}>Last Login</th>
+              <th style={{ padding: '0.75rem', textAlign: 'left' }}>Trial Expires</th>
+              <th style={{ padding: '0.75rem', textAlign: 'left' }}>Status</th>
               <th style={{ padding: '0.75rem', textAlign: 'left' }}>Action</th>
             </tr>
           </thead>
           <tbody>
-            {users.map(user => (
-              <tr key={user.id} style={{ borderBottom: '1px solid #eee' }}>
-                <td style={{ padding: '0.75rem' }}>{user.email}</td>
-                <td style={{ padding: '0.75rem' }}>{user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN') : '—'}</td>
-                <td style={{ padding: '0.75rem' }}>{user.lastSignIn ? new Date(user.lastSignIn).toLocaleDateString('en-IN') : 'Never'}</td>
-                <td style={{ padding: '0.75rem' }}>
-                  <button type="button" onClick={() => deleteUser(user.id, user.email)}
-                    style={{ padding: '0.25rem 0.75rem', background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {users.map(user => {
+              const now = new Date();
+              const expiry = user.trialExpiresAt ? new Date(user.trialExpiresAt) : null;
+              const daysLeft = expiry ? Math.ceil((expiry - now) / (1000 * 60 * 60 * 24)) : null;
+              
+              // Status badge color
+              let statusColor = '#16a34a';   // green = active
+              let statusText = 'Active';
+              let statusBg = '#f0fdf4';
+              
+              if (daysLeft !== null) {
+                if (daysLeft < 0) {
+                  statusColor = '#dc2626'; statusBg = '#fef2f2'; statusText = 'Expired';
+                } else if (daysLeft <= 3) {
+                  statusColor = '#d97706'; statusBg = '#fffbeb'; statusText = `${daysLeft}d left`;
+                } else {
+                  statusText = `${daysLeft}d left`;
+                }
+              }
+
+              return (
+                <tr key={user.id} style={{ borderBottom: '1px solid #eee', background: daysLeft !== null && daysLeft < 0 ? '#fff5f5' : 'white' }}>
+                  <td style={{ padding: '0.75rem' }}>{user.email}</td>
+                  <td style={{ padding: '0.75rem', color: '#555' }}>{user.fullName || '—'}</td>
+                  <td style={{ padding: '0.75rem' }}>{user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN') : '—'}</td>
+                  <td style={{ padding: '0.75rem', fontWeight: 500 }}>
+                    {expiry ? expiry.toLocaleDateString('en-IN') : '—'}
+                  </td>
+                  <td style={{ padding: '0.75rem' }}>
+                    <span style={{
+                      padding: '2px 10px',
+                      borderRadius: '12px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      color: statusColor,
+                      background: statusBg,
+                      border: `1px solid ${statusColor}33`
+                    }}>
+                      {statusText}
+                    </span>
+                  </td>
+                  <td style={{ padding: '0.75rem' }}>
+                    <button type="button" onClick={() => deleteUser(user.id, user.email)}
+                      style={{ padding: '0.25rem 0.75rem', background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}

@@ -30,6 +30,8 @@ function App() {
     const isAuthenticated = useStore(state => state.auth.isAuthenticated);
     const authLoading = useStore(state => state.auth.loading);
     const checkAuth = useStore(state => state.checkAuth);
+    const [isBlocked, setIsBlocked] = useState(false);
+    const [blockReason, setBlockReason] = useState('');
 
     useEffect(() => {
         checkAuth().then(() => {
@@ -53,6 +55,15 @@ function App() {
       };
     }, []);
 
+    useEffect(() => {
+      const handleBlocked = (e) => {
+        setIsBlocked(true);
+        setBlockReason(e.detail?.message || '');
+      };
+      window.addEventListener('jewel:blocked', handleBlocked);
+      return () => window.removeEventListener('jewel:blocked', handleBlocked);
+    }, []);
+
     if (authLoading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg)' }}>
@@ -63,6 +74,39 @@ function App() {
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
         );
+    }
+
+    if (isBlocked) {
+      return (
+        <div style={{ 
+          display: 'flex', justifyContent: 'center', alignItems: 'center', 
+          height: '100vh', background: 'var(--bg)', flexDirection: 'column',
+          gap: '1rem', padding: '2rem', textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '3rem' }}>⏰</div>
+          <h2 style={{ color: 'var(--text-primary)', margin: 0 }}>Trial Expired</h2>
+          <p style={{ color: 'var(--text-secondary)', maxWidth: '400px', lineHeight: 1.6 }}>
+            {blockReason || 'Your 14-day free trial has ended. Contact the administrator to continue using JewelManager Pro.'}
+          </p>
+          <a 
+            href="https://wa.me/919876543210" 
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              marginTop: '0.5rem',
+              padding: '0.75rem 2rem',
+              background: '#25D366',
+              color: 'white',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              fontWeight: 600,
+              fontSize: '1rem'
+            }}
+          >
+            💬 Contact on WhatsApp
+          </a>
+        </div>
+      );
     }
 
     return (

@@ -50,7 +50,7 @@ router.post('/create-user', requireApiAuth, requireAdminApi, async (req, res) =>
       return res.status(400).json({ message: msg });
     }
 
-    const trialEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const trialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
     await supabaseAdmin.from('subscriptions').insert({
       id: crypto.randomUUID(),
       user_id: userId,
@@ -77,17 +77,23 @@ router.get('/users', requireApiAuth, requireAdminApi, async (req, res) => {
   try {
     const { data, error } = await supabaseAdmin
       .from('users')
-      .select('id, email, full_name, created_at')
+      .select('id, email, full_name, created_at, subscriptions(plan, status, current_period_end)')
       .order('created_at', { ascending: false });
 
     if (error) return res.status(500).json({ message: error.message });
 
-    const users = (data || []).map((u) => ({
-      id: u.id,
-      email: u.email,
-      fullName: u.full_name,
-      createdAt: u.created_at,
-    }));
+    const users = (data || []).map((u) => {
+      const sub = u.subscriptions?.[0] || null;
+      return {
+        id: u.id,
+        email: u.email,
+        fullName: u.full_name,
+        createdAt: u.created_at,
+        plan: sub?.plan || 'none',
+        subscriptionStatus: sub?.status || 'none',
+        trialExpiresAt: sub?.current_period_end || null,
+      };
+    });
 
     return res.json({ users });
   } catch (error) {

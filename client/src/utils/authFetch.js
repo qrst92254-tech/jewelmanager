@@ -27,6 +27,14 @@ export async function authFetch(url, options = {}) {
     throw new Error(data.message || 'Session expired');
   }
 
+  if (res.status === 403 && data.blocked === true) {
+    // Dispatch a custom event so App.jsx can show the blocked screen
+    window.dispatchEvent(new CustomEvent('jewel:blocked', { 
+      detail: { message: data.message, reason: data.reason } 
+    }));
+    throw new Error(data.message || 'Access blocked');
+  }
+
   if (!res.ok) {
     throw new Error(data.error || data.message || `Request failed (${res.status})`);
   }
