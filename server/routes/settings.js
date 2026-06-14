@@ -81,52 +81,38 @@ router.post('/batch', async (req, res) => {
 router.put('/password', async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   const uid = tenantId(req);
-
   if (!currentPassword || !newPassword) {
     return res.status(400).json({ message: 'Both fields required' });
   }
   if (newPassword.length < 8) {
     return res.status(400).json({ message: 'New password must be at least 8 characters' });
   }
-
   try {
-    // Get the user email from users table
-    const { data: userData, error: userError } = await supabase
+    const bcrypt = require('bcryptjs');
+    // Get current password hash from users table
+    const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
-      .select('email')
+      .select('password_hash')
       .eq('id', uid)
       .single();
-
     if (userError || !userData) {
       return res.status(404).json({ message: 'User not found' });
     }
-
-    // Verify current password against Supabase Auth
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: userData.email,
-      password: currentPassword,
-    });
-
-    if (signInError) {
+    // Verify current password against stored bcrypt hash
+    const isMatch = await bcrypt.compare(currentPassword, userData.password_hash);
+    if (!isMatch) {
       return res.status(401).json({ message: 'Current password is incorrect' });
     }
-
-    // Update password in Supabase Auth using admin API
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-      uid,
-      { password: newPassword }
-    );
-
+    // Hash new password and update in users table
+    const newHash = await bcrypt.hash(newPassword, 10);
+    const { error: updateError } = await supabaseAdmin
+      .from('users')
+      .update({ password_hash: newHash })
+      .eq('id', uid);
     if (updateError) {
-      console.error('Supabase auth password update error:', updateError);
+      console.error('Password update error:', updateError);
       return res.status(500).json({ message: 'Failed to update password' });
     }
-
-    // Also update password_hash in users table for backwards compatibility
-    const bcrypt = require('bcryptjs');
-    const newHash = await bcrypt.hash(newPassword, 10);
-    await supabase.from('users').update({ password_hash: newHash }).eq('id', uid);
-
     return res.json({ success: true, message: 'Password updated successfully' });
   } catch (err) {
     console.error('Password update error:', err);
