@@ -3,6 +3,7 @@ const router = express.Router();
 const { supabase, supabaseAdmin } = require('../services/supabase');
 const { tenantId } = require('../db/tenant');
 
+// Get all settings
 router.get('/', async (req, res) => {
   try {
     const uid = tenantId(req);
@@ -22,26 +23,7 @@ router.get('/', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:key', async (req, res) => {
-  try {
-    const uid = tenantId(req);
-    const { value } = req.body;
-    const { error } = await supabase
-      .from('shop_settings')
-      .upsert({
-        key: req.params.key,
-        value,
-        user_id: uid,
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'user_id,key'
-      });
-
-    if (error) throw error;
-    res.json({ message: 'Setting saved' });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
+// Batch update settings
 router.post('/batch', async (req, res) => {
   try {
     const uid = tenantId(req);
@@ -78,6 +60,7 @@ router.post('/batch', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Password update route (must be before wildcard key route)
 router.put('/password', async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   const uid = tenantId(req);
@@ -118,6 +101,27 @@ router.put('/password', async (req, res) => {
     console.error('Password update error:', err);
     return res.status(500).json({ message: 'Server error' });
   }
+});
+
+// Wildcard key route (must be after password route)
+router.put('/:key', async (req, res) => {
+  try {
+    const uid = tenantId(req);
+    const { value } = req.body;
+    const { error } = await supabase
+      .from('shop_settings')
+      .upsert({
+        key: req.params.key,
+        value,
+        user_id: uid,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,key'
+      });
+
+    if (error) throw error;
+    res.json({ message: 'Setting saved' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 module.exports = router;
