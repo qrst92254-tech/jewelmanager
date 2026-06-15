@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
 const BarcodeScanner = ({ onResult, onClose }) => {
     const scannerRef = useRef(null);
@@ -10,7 +10,11 @@ const BarcodeScanner = ({ onResult, onClose }) => {
             {
                 fps: 10,
                 qrbox: { width: 250, height: 120 },
-                formatsToSupport: [0],
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.QR_CODE,
+                    Html5QrcodeSupportedFormats.EAN_13
+                ],
                 rememberLastUsedCamera: true
             },
             false
