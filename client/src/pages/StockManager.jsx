@@ -86,60 +86,58 @@ const StockManager = () => {
     };
 
     const handlePrintTag = (product) => {
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
-            <html>
-                <head>
-                    <title>Tag - ${product.sku}</title>
-                    <style>
-                        body { font-family: 'DM Sans', sans-serif; padding: 20px; text-align: center; margin: 0; }
-                        .tag-box { border: 2px solid #B8960C; border-radius: 8px; padding: 15px; width: 220px; margin: 0 auto; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-                        .shop-name { font-size: 0.75rem; color: #B8960C; font-weight: 600; text-transform: uppercase; }
-                        .product-name { font-weight: 600; font-size: 0.95rem; margin-top: 4px; }
-                        .barcode-wrap { margin: 10px auto 4px; }
-                        .barcode-wrap svg { width: 180px; height: 60px; }
-                        .sku { font-family: monospace; font-size: 1rem; font-weight: bold; letter-spacing: 1px; margin-top: 2px; }
-                        .specs { font-size: 0.85rem; color: #555; margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 8px; }
-                    </style>
-                </head>
-                <body>
-                    <div class="tag-box">
-                        <div class="shop-name">JewelManager Pro</div>
-                        <div class="product-name">${product.name}</div>
-                        <div class="barcode-wrap">
-                            <svg id="barcode"></svg>
-                        </div>
-                        <div class="sku">${product.sku}</div>
-                        <div class="specs">
-                            <div>Metal: ${product.metal?.toUpperCase()} (${product.purity})</div>
-                            <div>Weight: ${product.net_weight}g</div>
-                        </div>
-                    </div>
-                    <script>
-                        function loadScript(src, callback) {
-                            var s = document.createElement('script');
-                            s.src = src;
-                            s.onload = callback;
-                            document.head.appendChild(s);
-                        }
-                        loadScript('https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js', function() {
-                            JsBarcode("#barcode", "${product.sku}", {
-                                format: "CODE128",
-                                width: 2,
-                                height: 50,
-                                displayValue: false,
-                                margin: 4
-                            });
-                            setTimeout(function() {
-                                window.print();
-                                window.close();
-                            }, 800);
-                        });
-                    <\/script>
-                </body>
-            </html>
-        `);
-        printWindow.document.close();
+        const sku = product.sku || '';
+        
+        // Generate barcode as data URL using canvas in the MAIN window first
+        // then pass it into the print popup — avoids CDN blocking issues
+        const canvas = document.createElement('canvas');
+        
+        // Use JsBarcode from the main window context
+        import('https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js')
+            .then(() => {
+                JsBarcode(canvas, sku, {
+                    format: 'CODE128',
+                    width: 3,
+                    height: 80,
+                    displayValue: false,
+                    margin: 10
+                });
+                const barcodeDataURL = canvas.toDataURL('image/png');
+                
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`
+                    <html>
+                        <head>
+                            <title>Tag - ${sku}</title>
+                            <style>
+                                body { font-family: Arial, sans-serif; padding: 20px; text-align: center; margin: 0; background: white; }
+                                .tag-box { border: 2px solid #B8960C; border-radius: 8px; padding: 15px; width: 220px; margin: 0 auto; background: white; }
+                                .shop-name { font-size: 0.75rem; color: #B8960C; font-weight: 600; text-transform: uppercase; }
+                                .product-name { font-weight: 600; font-size: 0.95rem; margin-top: 4px; }
+                                .barcode-wrap { margin: 10px auto 4px; }
+                                .barcode-wrap img { width: 200px; }
+                                .sku { font-family: monospace; font-size: 1rem; font-weight: bold; letter-spacing: 1px; margin-top: 2px; }
+                                .specs { font-size: 0.85rem; color: #555; margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 8px; }
+                            </style>
+                        </head>
+                        <body onload="window.print(); window.close();">
+                            <div class="tag-box">
+                                <div class="shop-name">JewelManager Pro</div>
+                                <div class="product-name">${product.name}</div>
+                                <div class="barcode-wrap">
+                                    <img src="${barcodeDataURL}" alt="barcode" />
+                                </div>
+                                <div class="sku">${sku}</div>
+                                <div class="specs">
+                                    <div>Metal: ${product.metal?.toUpperCase() || ''} (${product.purity || ''})</div>
+                                    <div>Weight: ${product.net_weight || 0}g</div>
+                                </div>
+                            </div>
+                        </body>
+                    </html>
+                `);
+                printWindow.document.close();
+            });
     };
 
     const handleScanResult = (decodedText) => {
