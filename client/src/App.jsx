@@ -185,7 +185,7 @@ function App() {
                                 <Route path="/quotations" element={<Quotations />} />
                                 <Route path="/purchases" element={<Purchases />} />
                                 <Route path="/reports" element={<Reports />} />
-                                <Route path="/gst-report" element={<ProtectedRoute><GSTReport /></ProtectedRoute>} />
+                                <Route path="/gst-report" element={<GSTReport />} />
                                 <Route path="/accounting" element={<Accounting />} />
                                 <Route path="/settings" element={<Settings />} />
                                 <Route path="/admin/users" element={<AdminUsers />} />
