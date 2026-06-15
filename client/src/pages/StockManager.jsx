@@ -4,6 +4,7 @@ import { Edit, Trash2, PackageSearch, Plus, Search, Filter, X, Printer, Upload }
 import ImportModal from '../components/ImportModal';
 import { authFetch } from '../utils/authFetch';
 import useStore from '../store/useStore';
+import BarcodeScanner from '../components/BarcodeScanner';
 
 const API_URL = '';
 
@@ -15,6 +16,8 @@ const StockManager = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [scannerOpen, setScannerOpen] = useState(false);
+    const [highlightedSku, setHighlightedSku] = useState(null);
 
     const cachedProducts = useStore(state => state.cache.products);
     const cacheLoading = useStore(state => state.cache.productsLoading);
@@ -134,6 +137,22 @@ const StockManager = () => {
         printWindow.document.close();
     };
 
+    const handleScanResult = (decodedText) => {
+        const sku = decodedText.trim();
+        const found = products.find(p => p.sku === sku);
+        setScannerOpen(false);
+
+        if (found) {
+            setHighlightedSku(sku);
+            setSearchTerm(sku);
+            setTimeout(() => setHighlightedSku(null), 3000);
+        } else {
+            setSelectedProduct(null);
+            setIsFormOpen(true);
+            alert(`SKU "${sku}" not found in stock. Please add it as a new product.`);
+        }
+    };
+
     const filteredProducts = products.filter(p => 
         (p.name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) || 
         (p.sku ?? '').toLowerCase().includes(searchTerm.toLowerCase())
@@ -155,6 +174,24 @@ const StockManager = () => {
                     </button>
                     <button className="btn-primary" onClick={() => { setSelectedProduct(null); setIsFormOpen(true); }}>
                         <Plus size={18} style={{ marginRight: '8px' }} /> Add Product
+                    </button>
+                    <button
+                        onClick={() => setScannerOpen(true)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '8px 16px',
+                            background: '#B8960C',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            fontSize: '0.9rem'
+                        }}
+                    >
+                        📷 Scan
                     </button>
                 </div>
             </div>
@@ -258,7 +295,10 @@ const StockManager = () => {
                                 {filteredProducts.map(p => {
                                     const isLow = p.quantity <= (p.stock_alert_threshold || 1);
                                     return (
-                                        <tr key={p.id}>
+                                        <tr key={p.id} style={{
+                                            outline: highlightedSku === p.sku ? '3px solid #B8960C' : 'none',
+                                            transition: 'outline 0.3s ease'
+                                        }}>
                                             <td style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{p.sku}</td>
                                             <td style={{ fontWeight: 500 }}>{p.name}</td>
                                             <td>{p.category}</td>
@@ -339,6 +379,51 @@ const StockManager = () => {
                         <ProductForm product={selectedProduct} onSubmit={handleFormSubmit} onClear={handleCloseForm} />
                     </div>
                 </>
+            )}
+
+            {scannerOpen && (
+                <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    background: 'rgba(0,0,0,0.8)',
+                    zIndex: 9999,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '16px'
+                }}>
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '12px',
+                        padding: '20px',
+                        width: '320px',
+                        maxWidth: '90vw'
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '12px'
+                        }}>
+                            <span style={{ fontWeight: 600, fontSize: '1rem' }}>Scan Product Barcode</span>
+                            <button
+                                onClick={() => setScannerOpen(false)}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    fontSize: '1.4rem',
+                                    cursor: 'pointer',
+                                    color: '#666'
+                                }}
+                            >✕</button>
+                        </div>
+                        <BarcodeScanner
+                            onResult={handleScanResult}
+                            onClose={() => setScannerOpen(false)}
+                        />
+                    </div>
+                </div>
             )}
 
             <style>{`
