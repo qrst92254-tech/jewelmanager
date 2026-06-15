@@ -131,6 +131,7 @@ const Navbar = () => {
                         <NavSectionTitle>Finance</NavSectionTitle>
                         <NavItem to="/accounting" icon={<BookOpen size={18} />}>Cash Book & Ledger</NavItem>
                         <NavItem to="/reports" icon={<BarChart3 size={18} />}>GST & Reports</NavItem>
+                        <NavItem to="/gst-report" icon={<FileText size={18} />}>GST Report</NavItem>
 
                         <NavSectionTitle>System</NavSectionTitle>
                         <NavItem to="/settings" icon={<Settings size={18} />}>Settings</NavItem>

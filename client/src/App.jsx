@@ -21,6 +21,7 @@ import Repairs from './pages/Repairs';
 import Quotations from './pages/Quotations';
 import Purchases from './pages/Purchases';
 import Reports from './pages/Reports';
+import GSTReport from './pages/GSTReport';
 import Accounting from './pages/Accounting';
 import Settings from './pages/Settings';
 import AdminUsers from './pages/AdminUsers';
@@ -184,6 +185,7 @@ function App() {
                                 <Route path="/quotations" element={<Quotations />} />
                                 <Route path="/purchases" element={<Purchases />} />
                                 <Route path="/reports" element={<Reports />} />
+                                <Route path="/gst-report" element={<ProtectedRoute><GSTReport /></ProtectedRoute>} />
                                 <Route path="/accounting" element={<Accounting />} />
                                 <Route path="/settings" element={<Settings />} />
                                 <Route path="/admin/users" element={<AdminUsers />} />

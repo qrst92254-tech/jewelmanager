@@ -175,4 +175,34 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+// GET /api/sales/by-month?month=6&year=2026
+router.get('/by-month', async (req, res) => {
+    try {
+        const uid = tenantId(req);
+        const month = parseInt(req.query.month);
+        const year = parseInt(req.query.year);
+
+        if (!month || !year) {
+            return res.status(400).json({ message: 'month and year are required' });
+        }
+
+        const startDate = new Date(year, month - 1, 1).toISOString();
+        const endDate = new Date(year, month, 0, 23, 59, 59).toISOString();
+
+        const { data, error } = await supabase
+            .from('sales')
+            .select('id, bill_number, customer_name, sale_date, total_amount, discount, cgst_rate, sgst_rate, cgst_amount, sgst_amount, final_amount, payment_mode')
+            .eq('user_id', uid)
+            .gte('sale_date', startDate)
+            .lte('sale_date', endDate)
+            .order('sale_date', { ascending: true });
+
+        if (error) throw error;
+        return res.json(data || []);
+    } catch (err) {
+        console.error('GST report error:', err);
+        return res.status(500).json({ message: 'Server error' });
+    }
+});
+
 module.exports = router;
