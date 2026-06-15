@@ -5,6 +5,7 @@ import ImportModal from '../components/ImportModal';
 import { authFetch } from '../utils/authFetch';
 import useStore from '../store/useStore';
 import BarcodeScanner from '../components/BarcodeScanner';
+import JsBarcode from 'jsbarcode';
 
 const API_URL = '';
 
@@ -87,57 +88,51 @@ const StockManager = () => {
 
     const handlePrintTag = (product) => {
         const sku = product.sku || '';
-        
-        // Generate barcode as data URL using canvas in the MAIN window first
-        // then pass it into the print popup — avoids CDN blocking issues
+
+        // Generate barcode on a canvas in the main window using installed JsBarcode
         const canvas = document.createElement('canvas');
-        
-        // Use JsBarcode from the main window context
-        import('https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js')
-            .then(() => {
-                JsBarcode(canvas, sku, {
-                    format: 'CODE128',
-                    width: 3,
-                    height: 80,
-                    displayValue: false,
-                    margin: 10
-                });
-                const barcodeDataURL = canvas.toDataURL('image/png');
-                
-                const printWindow = window.open('', '_blank');
-                printWindow.document.write(`
-                    <html>
-                        <head>
-                            <title>Tag - ${sku}</title>
-                            <style>
-                                body { font-family: Arial, sans-serif; padding: 20px; text-align: center; margin: 0; background: white; }
-                                .tag-box { border: 2px solid #B8960C; border-radius: 8px; padding: 15px; width: 220px; margin: 0 auto; background: white; }
-                                .shop-name { font-size: 0.75rem; color: #B8960C; font-weight: 600; text-transform: uppercase; }
-                                .product-name { font-weight: 600; font-size: 0.95rem; margin-top: 4px; }
-                                .barcode-wrap { margin: 10px auto 4px; }
-                                .barcode-wrap img { width: 200px; }
-                                .sku { font-family: monospace; font-size: 1rem; font-weight: bold; letter-spacing: 1px; margin-top: 2px; }
-                                .specs { font-size: 0.85rem; color: #555; margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 8px; }
-                            </style>
-                        </head>
-                        <body onload="window.print(); window.close();">
-                            <div class="tag-box">
-                                <div class="shop-name">JewelManager Pro</div>
-                                <div class="product-name">${product.name}</div>
-                                <div class="barcode-wrap">
-                                    <img src="${barcodeDataURL}" alt="barcode" />
-                                </div>
-                                <div class="sku">${sku}</div>
-                                <div class="specs">
-                                    <div>Metal: ${product.metal?.toUpperCase() || ''} (${product.purity || ''})</div>
-                                    <div>Weight: ${product.net_weight || 0}g</div>
-                                </div>
-                            </div>
-                        </body>
-                    </html>
-                `);
-                printWindow.document.close();
-            });
+        JsBarcode(canvas, sku, {
+            format: 'CODE128',
+            width: 3,
+            height: 80,
+            displayValue: false,
+            margin: 10
+        });
+        const barcodeDataURL = canvas.toDataURL('image/png');
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Tag - ${sku}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; text-align: center; margin: 0; background: white; }
+                        .tag-box { border: 2px solid #B8960C; border-radius: 8px; padding: 15px; width: 220px; margin: 0 auto; background: white; }
+                        .shop-name { font-size: 0.75rem; color: #B8960C; font-weight: 600; text-transform: uppercase; }
+                        .product-name { font-weight: 600; font-size: 0.95rem; margin-top: 4px; }
+                        .barcode-wrap { margin: 10px auto 4px; }
+                        .barcode-wrap img { width: 200px; }
+                        .sku { font-family: monospace; font-size: 1rem; font-weight: bold; letter-spacing: 1px; margin-top: 2px; }
+                        .specs { font-size: 0.85rem; color: #555; margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 8px; }
+                    </style>
+                </head>
+                <body onload="window.print(); window.close();">
+                    <div class="tag-box">
+                        <div class="shop-name">JewelManager Pro</div>
+                        <div class="product-name">${product.name}</div>
+                        <div class="barcode-wrap">
+                            <img src="${barcodeDataURL}" alt="barcode" />
+                        </div>
+                        <div class="sku">${sku}</div>
+                        <div class="specs">
+                            <div>Metal: ${product.metal?.toUpperCase() || ''} (${product.purity || ''})</div>
+                            <div>Weight: ${product.net_weight || 0}g</div>
+                        </div>
+                    </div>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
     };
 
     const handleScanResult = (decodedText) => {
