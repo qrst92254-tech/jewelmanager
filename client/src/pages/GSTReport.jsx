@@ -249,8 +249,18 @@ const GSTReport = () => {
             {/* Print-only styles */}
             <style>{`
                 @media print {
-                    body > *:not(#gst-report-root) { display: none; }
-                    #gst-report-root { display: block !important; }
+                    .app-layout > nav,
+                    .app-layout > aside,
+                    nav.sidebar,
+                    aside.sidebar {
+                        display: none !important;
+                    }
+                    .content-container {
+                        margin-left: 0 !important;
+                    }
+                    #gst-report-root {
+                        max-width: 100% !important;
+                    }
                     button { display: none !important; }
                     select { display: none !important; }
                     input { border: none !important; }
