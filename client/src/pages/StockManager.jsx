@@ -91,7 +91,6 @@ const StockManager = () => {
             <html>
                 <head>
                     <title>Tag - ${product.sku}</title>
-                    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
                     <style>
                         body { font-family: 'DM Sans', sans-serif; padding: 20px; text-align: center; margin: 0; }
                         .tag-box { border: 2px solid #B8960C; border-radius: 8px; padding: 15px; width: 220px; margin: 0 auto; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
@@ -117,7 +116,13 @@ const StockManager = () => {
                         </div>
                     </div>
                     <script>
-                        window.onload = function() {
+                        function loadScript(src, callback) {
+                            var s = document.createElement('script');
+                            s.src = src;
+                            s.onload = callback;
+                            document.head.appendChild(s);
+                        }
+                        loadScript('https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js', function() {
                             JsBarcode("#barcode", "${product.sku}", {
                                 format: "CODE128",
                                 width: 2,
@@ -128,8 +133,8 @@ const StockManager = () => {
                             setTimeout(function() {
                                 window.print();
                                 window.close();
-                            }, 500);
-                        };
+                            }, 800);
+                        });
                     <\/script>
                 </body>
             </html>
