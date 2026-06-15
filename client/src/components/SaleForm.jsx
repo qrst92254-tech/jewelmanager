@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Search } from 'lucide-react';
 import { authFetch } from '../utils/authFetch';
+import BarcodeScanner from './BarcodeScanner';
 
 const API_URL = '';
 
@@ -15,6 +16,7 @@ const SaleForm = ({ isOpen, onClose, onSave, products }) => {
     const [customers, setCustomers] = useState([]);
     const [customerSearch, setCustomerSearch] = useState('');
     const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+    const [saleScannerOpen, setSaleScannerOpen] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -54,6 +56,24 @@ const SaleForm = ({ isOpen, onClose, onSave, products }) => {
 
     const handleAddItem = () => {
         setItems([...items, { product_id: '', quantity: 1, price_at_sale: 0 }]);
+    };
+
+    const handleSaleScanResult = (decodedText) => {
+        const sku = decodedText.trim();
+        const product = products.find(p => p.sku === sku);
+        setSaleScannerOpen(false);
+
+        if (!product) {
+            alert(`Product with SKU "${sku}" not found in stock.`);
+            return;
+        }
+
+        const newItem = {
+            product_id: String(product.id),
+            quantity: 1,
+            price_at_sale: product.net_weight * 2000
+        };
+        setItems(prev => [...prev, newItem]);
     };
 
     const handleItemChange = (index, field, value) => {
@@ -233,6 +253,25 @@ const SaleForm = ({ isOpen, onClose, onSave, products }) => {
                         >
                             <Plus size={18} /> Add Item
                         </button>
+                        <button
+                            type="button"
+                            onClick={() => setSaleScannerOpen(true)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '8px 14px',
+                                background: '#B8960C',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                fontSize: '0.85rem'
+                            }}
+                        >
+                            📷 Scan Item
+                        </button>
 
                         <h3 style={{ fontSize: '1rem', color: 'var(--gold-dark)', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>Payment</h3>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -311,6 +350,51 @@ const SaleForm = ({ isOpen, onClose, onSave, products }) => {
                     </div>
                 </form>
             </div>
+
+            {saleScannerOpen && (
+                <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    background: 'rgba(0,0,0,0.85)',
+                    zIndex: 99999,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '12px',
+                        padding: '20px',
+                        width: '320px',
+                        maxWidth: '90vw'
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '12px'
+                        }}>
+                            <span style={{ fontWeight: 600, fontSize: '1rem' }}>Scan Product Barcode</span>
+                            <button
+                                type="button"
+                                onClick={() => setSaleScannerOpen(false)}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    fontSize: '1.4rem',
+                                    cursor: 'pointer',
+                                    color: '#666'
+                                }}
+                            >✕</button>
+                        </div>
+                        <BarcodeScanner
+                            onResult={handleSaleScanResult}
+                            onClose={() => setSaleScannerOpen(false)}
+                        />
+                    </div>
+                </div>
+            )}
 
             <style>{`
                 @keyframes slideInRight {
