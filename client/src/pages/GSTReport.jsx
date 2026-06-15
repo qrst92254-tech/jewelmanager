@@ -261,6 +261,19 @@ const GSTReport = () => {
                     #gst-report-root {
                         max-width: 100% !important;
                     }
+                    table {
+                        width: 100% !important;
+                        table-layout: auto !important;
+                        font-size: 10px !important;
+                    }
+                    .table-wrapper,
+                    div[style*="overflow"] {
+                        overflow: visible !important;
+                        width: 100% !important;
+                    }
+                    @page {
+                        size: landscape;
+                    }
                     button { display: none !important; }
                     select { display: none !important; }
                     input { border: none !important; }
