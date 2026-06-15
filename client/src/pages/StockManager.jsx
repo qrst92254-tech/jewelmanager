@@ -116,7 +116,7 @@ const StockManager = () => {
                         .specs { font-size: 0.85rem; color: #555; margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 8px; }
                     </style>
                 </head>
-                <body onload="window.print(); window.close();">
+                <body onload="window.print();">
                     <div class="tag-box">
                         <div class="shop-name">JewelManager Pro</div>
                         <div class="product-name">${product.name}</div>
@@ -133,6 +133,7 @@ const StockManager = () => {
             </html>
         `);
         printWindow.document.close();
+        printWindow.onafterprint = () => printWindow.close();
     };
 
     const handleScanResult = (decodedText) => {
