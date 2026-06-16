@@ -74,6 +74,47 @@ const SaleForm = ({ isOpen, onClose, onSave, products }) => {
             price_at_sale: product.net_weight * 2000
         };
         setItems(prev => [...prev, newItem]);
+        printSingleItemReceipt(newItem, product);
+    };
+
+    const printSingleItemReceipt = (item, product) => {
+        const renderPrice = (value) => '₹' + (value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const lineTotal = (item.price_at_sale || 0) * (item.quantity || 1);
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Item Receipt - ${product?.sku || ''}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 24px; margin: 0; color: #1A1A1A; }
+                        .box { max-width: 380px; margin: 0 auto; border: 2px solid #B8960C; border-radius: 8px; padding: 20px; }
+                        .shop-name { font-size: 1.1rem; font-weight: 700; color: #B8960C; text-align: center; margin-bottom: 4px; }
+                        .label { text-align: center; font-size: 0.75rem; letter-spacing: 1px; color: #999; text-transform: uppercase; margin-bottom: 16px; }
+                        .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.9rem; border-bottom: 1px dashed #eee; }
+                        .row span:first-child { color: #666; }
+                        .row span:last-child { font-weight: 600; }
+                        .total-row { display: flex; justify-content: space-between; padding-top: 12px; margin-top: 8px; border-top: 2px solid #B8960C; }
+                        .total-row span:first-child { font-weight: 700; font-size: 1rem; }
+                        .total-row span:last-child { font-weight: 700; font-size: 1.2rem; color: #B8960C; }
+                    </style>
+                </head>
+                <body onload="window.print(); window.close();">
+                    <div class="box">
+                        <div class="shop-name">JewelManager Pro</div>
+                        <div class="label">Item Receipt</div>
+                        <div class="row"><span>Item:</span><span>${product?.name || ''}</span></div>
+                        <div class="row"><span>SKU:</span><span>${product?.sku || ''}</span></div>
+                        <div class="row"><span>Metal:</span><span>${product?.metal?.toUpperCase() || ''} (${product?.purity || ''})</span></div>
+                        <div class="row"><span>Net Weight:</span><span>${product?.net_weight || 0}g</span></div>
+                        <div class="row"><span>Quantity:</span><span>${item.quantity || 1}</span></div>
+                        <div class="row"><span>Price:</span><span>${renderPrice(item.price_at_sale)}</span></div>
+                        <div class="total-row"><span>Item Total:</span><span>${renderPrice(lineTotal)}</span></div>
+                    </div>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
     };
 
     const handleItemChange = (index, field, value) => {
