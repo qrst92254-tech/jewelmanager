@@ -23,7 +23,8 @@ import {
 } from 'lucide-react';
 
 const Navbar = () => {
-    const { isAuthenticated, user, isAdmin, logout } = useStore(state => state.auth);
+    const { isAuthenticated, user, isAdmin } = useStore(state => state.auth);
+    const logout = useStore(state => state.logout);
     const navigate = useNavigate();
     const [mobileOpen, setMobileOpen] = useState(false);
 
